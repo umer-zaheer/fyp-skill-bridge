@@ -19,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { courseImages } from "@/lib/defaultImages";
 
 export const Route = createFileRoute("/student/courses")({ component: MyCourses });
 
@@ -37,17 +38,18 @@ type Course = {
   hours: number;
   color: string;
   icon: string;
+  image: string;
 };
 
 const allCourses: Course[] = [
-  { id: "c1", title: "Advanced TypeScript", instructor: "Sarah Lin", category: "Development", level: "Advanced", status: "In Progress", progress: 72, lessons: 32, completed: 23, rating: 4.9, students: 1284, hours: 18, color: "from-amber-500 via-orange-500 to-rose-500", icon: "TS" },
-  { id: "c2", title: "Design Systems with Figma", instructor: "Marco Reyes", category: "Design", level: "Intermediate", status: "In Progress", progress: 40, lessons: 28, completed: 11, rating: 4.8, students: 982, hours: 14, color: "from-fuchsia-500 via-purple-500 to-amber-500", icon: "DS" },
-  { id: "c3", title: "Data Science 101", instructor: "Priya Nair", category: "Data", level: "Beginner", status: "Completed", progress: 100, lessons: 24, completed: 24, rating: 4.7, students: 874, hours: 12, color: "from-emerald-500 via-teal-500 to-amber-500", icon: "DS" },
-  { id: "c4", title: "React Performance", instructor: "James Cole", category: "Development", level: "Advanced", status: "In Progress", progress: 18, lessons: 20, completed: 4, rating: 4.9, students: 712, hours: 9, color: "from-indigo-500 via-blue-500 to-amber-500", icon: "R" },
-  { id: "c5", title: "Product Marketing", instructor: "Hannah Ortiz", category: "Marketing", level: "Intermediate", status: "In Progress", progress: 60, lessons: 18, completed: 11, rating: 4.6, students: 654, hours: 10, color: "from-rose-500 via-pink-500 to-amber-500", icon: "PM" },
-  { id: "c6", title: "UX Research Sprint", instructor: "Sara Bennett", category: "Design", level: "Intermediate", status: "Completed", progress: 100, lessons: 14, completed: 14, rating: 4.8, students: 540, hours: 7, color: "from-sky-500 via-cyan-500 to-amber-500", icon: "UX" },
-  { id: "c7", title: "Rust for Web Devs", instructor: "Liam Park", category: "Development", level: "Advanced", status: "Not Started", progress: 0, lessons: 22, completed: 0, rating: 4.9, students: 432, hours: 22, color: "from-orange-500 via-red-500 to-amber-500", icon: "Rs" },
-  { id: "c8", title: "Brand Identity Studio", instructor: "Hannah Ortiz", category: "Design", level: "Beginner", status: "Not Started", progress: 0, lessons: 16, completed: 0, rating: 4.7, students: 388, hours: 8, color: "from-violet-500 via-fuchsia-500 to-amber-500", icon: "BI" },
+  { id: "c1", title: "Advanced TypeScript", instructor: "Sarah Lin", category: "Development", level: "Advanced", status: "In Progress", progress: 72, lessons: 32, completed: 23, rating: 4.9, students: 1284, hours: 18, color: "from-amber-500 via-orange-500 to-rose-500", icon: "TS", image: courseImages.typescript },
+  { id: "c2", title: "Design Systems with Figma", instructor: "Marco Reyes", category: "Design", level: "Intermediate", status: "In Progress", progress: 40, lessons: 28, completed: 11, rating: 4.8, students: 982, hours: 14, color: "from-fuchsia-500 via-purple-500 to-amber-500", icon: "DS", image: courseImages.figma },
+  { id: "c3", title: "Data Science 101", instructor: "Priya Nair", category: "Data", level: "Beginner", status: "Completed", progress: 100, lessons: 24, completed: 24, rating: 4.7, students: 874, hours: 12, color: "from-emerald-500 via-teal-500 to-amber-500", icon: "DS", image: courseImages.dataScience },
+  { id: "c4", title: "React Performance", instructor: "James Cole", category: "Development", level: "Advanced", status: "In Progress", progress: 18, lessons: 20, completed: 4, rating: 4.9, students: 712, hours: 9, color: "from-indigo-500 via-blue-500 to-amber-500", icon: "R", image: courseImages.react },
+  { id: "c5", title: "Product Marketing", instructor: "Hannah Ortiz", category: "Marketing", level: "Intermediate", status: "In Progress", progress: 60, lessons: 18, completed: 11, rating: 4.6, students: 654, hours: 10, color: "from-rose-500 via-pink-500 to-amber-500", icon: "PM", image: courseImages.product },
+  { id: "c6", title: "UX Research Sprint", instructor: "Sara Bennett", category: "Design", level: "Intermediate", status: "Completed", progress: 100, lessons: 14, completed: 14, rating: 4.8, students: 540, hours: 7, color: "from-sky-500 via-cyan-500 to-amber-500", icon: "UX", image: courseImages.ux },
+  { id: "c7", title: "Rust for Web Devs", instructor: "Liam Park", category: "Development", level: "Advanced", status: "Not Started", progress: 0, lessons: 22, completed: 0, rating: 4.9, students: 432, hours: 22, color: "from-orange-500 via-red-500 to-amber-500", icon: "Rs", image: courseImages.webDev },
+  { id: "c8", title: "Brand Identity Studio", instructor: "Hannah Ortiz", category: "Design", level: "Beginner", status: "Not Started", progress: 0, lessons: 16, completed: 0, rating: 4.7, students: 388, hours: 8, color: "from-violet-500 via-fuchsia-500 to-amber-500", icon: "BI", image: courseImages.design },
 ];
 
 const categories = ["All", "Development", "Design", "Data", "Marketing"] as const;
@@ -191,7 +193,7 @@ function MyCourses() {
       {filtered.length === 0 && (
         <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 p-12 text-center">
           <BookOpen className="h-10 w-10 text-zinc-700 mx-auto" />
-          <h3 className="mt-3 text-lg font-semibold text-white">No courses found</h3>
+          <h3 className="mt-3 text-lg font-semibold text-zinc-900 dark:text-white">No courses found</h3>
           <p className="text-sm text-zinc-500 mt-1">Try changing your filters or search query.</p>
         </div>
       )}
@@ -231,7 +233,7 @@ function FilterGroup({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-20 mt-2 min-w-[12rem] rounded-xl border border-zinc-800 bg-zinc-950/95 backdrop-blur-xl shadow-xl shadow-black/60 p-1"
+            className="absolute z-20 mt-2 min-w-[12rem] rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/95 backdrop-blur-xl shadow-xl shadow-black/60 p-1"
           >
             {options.map((o) => (
               <button
@@ -245,7 +247,7 @@ function FilterGroup({
                   "w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between transition-colors",
                   o === value
                     ? "bg-amber-500/10 text-amber-300"
-                    : "text-zinc-300 hover:bg-white/5 hover:text-white",
+                    : "text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-white",
                 )}
               >
                 {o}
@@ -280,14 +282,18 @@ function CourseCard3D({ course, delay }: { course: Course; delay: number }) {
         scale={1.02}
         className="rounded-2xl"
       >
-        <div className="group relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm transition-colors hover:border-amber-500/40 [transform-style:preserve-3d]">
+        <div className="group relative overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none backdrop-blur-sm transition-colors hover:border-amber-500/40 [transform-style:preserve-3d]">
           {/* Border glow */}
           <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[radial-gradient(circle_at_50%_0%,rgba(212,175,55,0.15),transparent_60%)]" />
 
           {/* Thumbnail */}
-          <div className={`relative h-44 bg-gradient-to-br ${course.color} overflow-hidden`}>
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.18),transparent_60%)]" />
-            <div className="absolute inset-0 opacity-[0.15] [background-image:linear-gradient(rgba(255,255,255,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.4)_1px,transparent_1px)] [background-size:24px_24px]" />
+          <div className="relative h-44 overflow-hidden bg-zinc-900">
+            <img
+              src={course.image}
+              alt={course.title}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent" />
 
             {/* Floating icon */}
             <motion.div
@@ -329,7 +335,7 @@ function CourseCard3D({ course, delay }: { course: Course; delay: number }) {
               </span>
             </div>
 
-            <h3 className="mt-2 text-lg font-semibold text-white group-hover:text-amber-300 transition-colors leading-tight">
+            <h3 className="mt-2 text-lg font-semibold text-zinc-900 dark:text-white group-hover:text-amber-300 transition-colors leading-tight">
               {course.title}
             </h3>
 
@@ -385,11 +391,12 @@ function CourseListRow({ course, delay }: { course: Course; delay: number }) {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0 }}
       transition={{ delay, duration: 0.4 }}
-      className="group rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm p-4 flex items-center gap-4 hover:border-amber-500/40 transition-colors"
+      className="group rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none backdrop-blur-sm p-4 flex items-center gap-4 hover:border-amber-500/40 transition-colors"
     >
-      <div className={`relative h-16 w-24 shrink-0 rounded-xl bg-gradient-to-br ${course.color} overflow-hidden`}>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.2),transparent_60%)]" />
-        <span className="absolute inset-0 flex items-center justify-center text-white font-bold font-serif">{course.icon}</span>
+      <div className="relative h-16 w-24 shrink-0 rounded-xl overflow-hidden bg-zinc-900">
+        <img src={course.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-zinc-950/30" />
+        <span className="absolute inset-0 flex items-center justify-center text-white font-bold font-serif drop-shadow">{course.icon}</span>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-zinc-500">
@@ -397,7 +404,7 @@ function CourseListRow({ course, delay }: { course: Course; delay: number }) {
           <span>·</span>
           <span>{course.level}</span>
         </div>
-        <p className="text-sm font-semibold text-white group-hover:text-amber-300 transition-colors truncate">{course.title}</p>
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-amber-300 transition-colors truncate">{course.title}</p>
         <p className="text-xs text-zinc-500">{course.instructor}</p>
       </div>
       <div className="hidden md:block w-48">

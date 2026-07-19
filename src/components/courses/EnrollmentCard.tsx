@@ -1,6 +1,7 @@
-
-
+import { defaultCoursePreview } from "@/lib/defaultImages";
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -78,13 +79,13 @@ export function EnrollmentCard({
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-80 group-hover:scale-105 transition-transform duration-700"
                 style={{
-                  backgroundImage: `url('${thumbnail || "/course-preview-bg.jpg"}')`,
+                  backgroundImage: `url('${thumbnail || defaultCoursePreview}')`,
                 }}
               />
               <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-transparent to-transparent opacity-80" />
 
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-sm border border-luxury-gold/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-luxury-gold group-hover:border-luxury-gold transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] shadow-[0_0_30px_rgba(212,175,55,0.2)] z-20">
+                <div className="w-16 h-16 rounded-full keep-contrast bg-black/40 backdrop-blur-sm border border-luxury-gold/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-luxury-gold group-hover:border-luxury-gold transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] shadow-[0_0_30px_rgba(212,175,55,0.2)] z-20">
                   <PlayCircle className="w-6 h-6 text-white ml-0.5 fill-white/10 group-hover:text-black group-hover:fill-black/20 transition-colors duration-500" />
                 </div>
                 {/* Ripple Effect */}
@@ -117,7 +118,7 @@ export function EnrollmentCard({
               </span>
             </div>
             <div className="flex items-baseline gap-3">
-              <span className="text-4xl font-serif text-white tracking-tight">
+              <span className="text-4xl font-serif text-zinc-900 dark:text-white tracking-tight">
                 ${currentPrice}
               </span>
               <span className="text-lg text-zinc-600 line-through decoration-zinc-700 decoration-1">
@@ -149,16 +150,30 @@ export function EnrollmentCard({
           <div className="space-y-3 mt-6">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
+                asChild
                 className="relative w-full text-sm tracking-widest font-semibold uppercase bg-luxury-gold hover:bg-[#c5a028] text-black shadow-[0_0_20px_-5px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_-5px_rgba(212,175,55,0.6)] transition-all duration-300 overflow-hidden group/btn"
                 size="lg"
               >
-                <span className="relative z-10">Buy Now</span>
-                <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-0 bg-white/20 transition-transform duration-500 skew-x-12" />
+                <Link to="/signup">
+                  <span className="relative z-10">Buy Now</span>
+                </Link>
               </Button>
             </motion.div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
+                type="button"
                 variant="outline"
+                onClick={() =>
+                  toast.success("Saved to wishlist", {
+                    description: "View it anytime from your student dashboard.",
+                    action: {
+                      label: "Open",
+                      onClick: () => {
+                        window.location.href = "/student/wishlist";
+                      },
+                    },
+                  })
+                }
                 className="w-full text-sm tracking-widest font-semibold uppercase border-white/10 bg-transparent text-zinc-400 hover:text-white hover:bg-white/5 hover:border-white/20 transition-colors"
                 size="lg"
               >

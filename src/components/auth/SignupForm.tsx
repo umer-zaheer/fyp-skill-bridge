@@ -6,11 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion } from "framer-motion";
 import { Loader2, ArrowRight } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 import { signupSchema } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -19,12 +21,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Link } from "@tanstack/react-router";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
-  // Default tab is student
   const [role, setRole] = useState<"student" | "instructor">("student");
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -32,22 +33,21 @@ export default function SignupForm() {
       fullName: "",
       email: "",
       password: "",
-      role: "student", // Initial default
+      role: "student",
     },
   });
 
   async function onSubmit(values: z.infer<typeof signupSchema>) {
     setIsLoading(true);
-
-    // Explicitly overwrite the role based on the current Tab state
-    const finalData = { ...values, role: role };
-
-    // Simulate API call
-    setTimeout(() => {
-      console.log("Submitted Data:", finalData);
-      setIsLoading(false);
-      // Handle redirect here
-    }, 2000);
+    const finalData = { ...values, role };
+    await new Promise((r) => setTimeout(r, 800));
+    setIsLoading(false);
+    toast.success("Account created", {
+      description: `Welcome, ${finalData.fullName || "learner"}`,
+    });
+    void navigate({
+      to: role === "instructor" ? "/instructor/dashboard" : "/student/dashboard",
+    });
   }
 
   // Animation variants for smooth tab switching
@@ -107,7 +107,7 @@ export default function SignupForm() {
                           role === "instructor" ? "Dr. John Doe" : "John Doe"
                         }
                         {...field}
-                        className="bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
+                        className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />
                     </FormControl>
                     <FormMessage className="text-red-400" />
@@ -127,7 +127,7 @@ export default function SignupForm() {
                       <Input
                         placeholder="you@skillbridge.com"
                         {...field}
-                        className="bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
+                        className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />
                     </FormControl>
                     <FormMessage className="text-red-400" />
@@ -148,7 +148,7 @@ export default function SignupForm() {
                         type="password"
                         placeholder="••••••••"
                         {...field}
-                        className="bg-zinc-900/50 border-zinc-800 text-white placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
+                        className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />
                     </FormControl>
                     <FormMessage className="text-red-400" />
@@ -159,7 +159,7 @@ export default function SignupForm() {
 
             <Button
               type="submit"
-              className="w-full h-12 bg-white text-black hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 font-medium text-md rounded-lg mt-4 group"
+              className="w-full h-12 keep-contrast bg-zinc-900 text-white dark:bg-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 font-medium text-md rounded-lg mt-4 group"
               disabled={isLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

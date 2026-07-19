@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-export const Route = createFileRoute("/courses/")({ component: CoursesPage });
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { z } from "zod";
 import { FilterSidebar, FilterState } from "@/components/courses/FilterSidebar";
 import { CourseCard, Course } from "@/components/courses/CourseCard";
 import { Input } from "@/components/ui/input";
@@ -19,13 +17,22 @@ import Navbar from "@/components/layout/Navbar";
 import { SparklesCore } from "@/components/ui/sparkles";
 import { Typewriter } from "@/components/ui/typewriter";
 
-// Mock Data
+const coursesSearchSchema = z.object({
+  category: z.string().optional(),
+  q: z.string().optional(),
+});
+
+export const Route = createFileRoute("/courses/")({
+  component: CoursesPage,
+  validateSearch: coursesSearchSchema,
+});
+
 const MOCK_COURSES: Course[] = [
   {
     id: "1",
     title: "The Python Mega Course: Build 10 Real World Applications",
     instructor: "Ardit Sulce",
-    thumbnail: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d",
+    thumbnail: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=800&auto=format&fit=crop",
     price: 19.99,
     originalPrice: 94.99,
     rating: 4.8,
@@ -39,7 +46,7 @@ const MOCK_COURSES: Course[] = [
     id: "2",
     title: "Complete Web Design: from Figma to Webflow to Freelancing",
     instructor: "Vako Shvili",
-    thumbnail: "https://images.unsplash.com/photo-1509395176047-4a66953fd231",
+    thumbnail: "https://images.unsplash.com/photo-1561070791-2526d30994b5?q=80&w=800&auto=format&fit=crop",
     price: 0,
     originalPrice: 19.99,
     rating: 4.9,
@@ -52,7 +59,7 @@ const MOCK_COURSES: Course[] = [
     id: "3",
     title: "Machine Learning A-Z™: Hands-On Python & R In Data Science",
     instructor: "Kirill Eremenko",
-    thumbnail: "https://images.unsplash.com/photo-1527474305487-b87b222841cc",
+    thumbnail: "https://images.unsplash.com/photo-1527474305487-b87b222841cc?q=80&w=800&auto=format&fit=crop",
     price: 12.99,
     originalPrice: 84.99,
     rating: 4.7,
@@ -66,7 +73,7 @@ const MOCK_COURSES: Course[] = [
     id: "4",
     title: "100 Days of Code: The Complete Python Pro Bootcamp for 2024",
     instructor: "Dr. Angela Yu",
-    thumbnail: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5",
+    thumbnail: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=800&auto=format&fit=crop",
     price: 15.99,
     originalPrice: 79.99,
     rating: 4.8,
@@ -79,7 +86,7 @@ const MOCK_COURSES: Course[] = [
     id: "5",
     title: "Ultimate Google Ads Training 2024: Profit with Pay Per Click",
     instructor: "Isaac Rudansky",
-    thumbnail: "https://images.unsplash.com/photo-1533750516457-a7f992034fec",
+    thumbnail: "https://images.unsplash.com/photo-1533750516457-a7f992034fec?q=80&w=800&auto=format&fit=crop",
     price: 24.99,
     originalPrice: 99.99,
     rating: 4.6,
@@ -92,7 +99,7 @@ const MOCK_COURSES: Course[] = [
     id: "6",
     title: "Adobe Photoshop CC: A Beginner to Advanced Photoshop Course",
     instructor: "Phil Ebiner",
-    thumbnail: "https://images.unsplash.com/photo-1611162617474-5b21e879e113",
+    thumbnail: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=800&auto=format&fit=crop",
     price: 0,
     rating: 4.5,
     reviews: 15600,
@@ -104,7 +111,7 @@ const MOCK_COURSES: Course[] = [
     id: "7",
     title: "React - The Complete Guide (incl Hooks, React Router, Redux)",
     instructor: "Maximilian Schwarzmüller",
-    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee",
+    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?q=80&w=800&auto=format&fit=crop",
     price: 18.99,
     originalPrice: 89.99,
     rating: 4.8,
@@ -117,7 +124,7 @@ const MOCK_COURSES: Course[] = [
     id: "8",
     title: "The Photography Masterclass: Your Guide to Photography",
     instructor: "Phil Ebiner",
-    thumbnail: "https://images.unsplash.com/photo-1554048612-387768052bf7",
+    thumbnail: "https://images.unsplash.com/photo-1554048612-387768052bf7?q=80&w=800&auto=format&fit=crop",
     price: 11.99,
     originalPrice: 199.99,
     rating: 4.7,
@@ -128,42 +135,59 @@ const MOCK_COURSES: Course[] = [
   },
 ];
 
+function mapHomeCategory(label: string): string {
+  const map: Record<string, string> = {
+    Development: "Development",
+    Design: "Design",
+    Business: "Business",
+    Marketing: "Marketing",
+    "AI & ML": "Data Science",
+    Language: "Language",
+    "Data Science": "Data Science",
+    Finance: "Business",
+  };
+  return map[label] ?? label;
+}
+
 function CoursesPage() {
+  const search = Route.useSearch();
   const [courses] = useState<Course[]>(MOCK_COURSES);
   const [sortOrder, setSortOrder] = useState("Most Popular");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(search.q ?? "");
   const [filters, setFilters] = useState<FilterState>({
-    categories: [],
+    categories: search.category ? [mapHomeCategory(search.category)] : [],
     levels: [],
     prices: [],
     rating: null,
   });
 
-  // Filter Logic
+  useEffect(() => {
+    if (search.category) {
+      setFilters((prev) => ({
+        ...prev,
+        categories: [mapHomeCategory(search.category!)],
+      }));
+    }
+    if (search.q) setSearchQuery(search.q);
+  }, [search.category, search.q]);
+
   const filteredCourses = courses.filter((course) => {
-    // 1. Search Query
     if (
       searchQuery &&
       !course.title.toLowerCase().includes(searchQuery.toLowerCase())
     ) {
       return false;
     }
-
-    // 2. Categories
     if (
       filters.categories.length > 0 &&
       !filters.categories.includes(course.category)
     ) {
       return false;
     }
-
-    // 3. Levels
     if (filters.levels.length > 0 && !filters.levels.includes(course.level)) {
       return false;
     }
-
-    // 4. Prices
     if (filters.prices.length > 0) {
       const isFree = course.price === 0;
       const isPaid = course.price > 0;
@@ -176,16 +200,12 @@ function CoursesPage() {
         return false;
       }
     }
-
-    // 5. Ratings
     if (filters.rating !== null && course.rating < filters.rating) {
       return false;
     }
-
     return true;
   });
 
-  // Sort Logic
   const sortedCourses = [...filteredCourses].sort((a, b) => {
     switch (sortOrder) {
       case "Price: Low to High":
@@ -195,7 +215,6 @@ function CoursesPage() {
       case "Highest Rated":
         return b.rating - a.rating;
       case "Newest":
-        // Assuming higher ID is newer for this mock
         return parseInt(b.id) - parseInt(a.id);
       case "Most Popular":
       default:
@@ -204,31 +223,30 @@ function CoursesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-gold-500/30">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-white font-sans selection:bg-amber-500/20 dark:selection:bg-gold-500/30">
       <Navbar />
 
-      {/* Header Section */}
-      <div className="relative pt-32 pb-40 border-b border-white/5 bg-black overflow-hidden flex flex-col justify-center min-h-[50vh]">
-        <div className="absolute inset-0 w-full h-full bg-black mask-[radial-gradient(800px_500px_at_top,transparent_20%,white)]"></div>
-        <div className="absolute inset-0 w-full h-full">
+      {/* Hero */}
+      <div className="relative pt-32 pb-24 md:pb-32 border-b border-zinc-200 dark:border-white/5 bg-zinc-100 dark:bg-black overflow-hidden flex flex-col justify-center min-h-[42vh]">
+        <div className="absolute inset-0 w-full h-full opacity-40 dark:opacity-80">
           <SparklesCore
             id="tsparticlesfullpage"
             background="transparent"
             minSize={0.6}
             maxSize={1.4}
             particleDensity={30}
-            className="w-full h-full opacity-80"
+            className="w-full h-full"
             particleColor="#d4af37"
           />
         </div>
-        <div className="absolute inset-0 bg-linear-to-t from-black via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-zinc-50 via-transparent to-transparent dark:from-zinc-950 dark:via-transparent dark:to-transparent" />
 
         <div className="container mx-auto px-6 relative z-10 text-center">
-          <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight text-white/90 drop-shadow-2xl">
+          <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tight text-zinc-900 dark:text-white drop-shadow-sm">
             Explore <span className="text-gold-500">Masterclasses</span>
           </h1>
-          <div className="text-zinc-400 max-w-2xl text-lg font-light leading-relaxed mx-auto">
-            <p className="mb-4 text-zinc-300">
+          <div className="max-w-2xl text-lg font-light leading-relaxed mx-auto">
+            <p className="mb-4 text-zinc-600 dark:text-zinc-300">
               Discover world-class courses designed to elevate your skills.
             </p>
             <div className="min-h-8 flex justify-center">
@@ -238,7 +256,7 @@ function CoursesPage() {
                   "Business to photography —",
                   "Find the perfect course for your journey.",
                 ]}
-                className="text-zinc-100 font-serif italic text-xl md:text-2xl drop-shadow-lg"
+                className="text-zinc-800 dark:text-zinc-100 font-serif italic text-xl md:text-2xl"
                 cursorClassName="bg-gold-500 h-6"
               />
             </div>
@@ -248,42 +266,37 @@ function CoursesPage() {
 
       <div className="container mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Desktop Sidebar */}
           <aside className="hidden lg:block w-64 shrink-0">
             <FilterSidebar filters={filters} setFilters={setFilters} />
           </aside>
 
-          {/* Main Content */}
           <main className="flex-1">
-            {/* Toolbar */}
             <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-8">
-              {/* Search */}
               <div className="relative w-full md:max-w-md">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-4 w-4 text-zinc-500" />
                 </div>
                 <Input
                   placeholder="Search courses..."
-                  className="pl-10 bg-zinc-900/50 border-zinc-800 text-white focus:border-gold-500/50 focus:ring-gold-500/20"
+                  className="pl-10 bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/60 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-500 focus-visible:border-gold-500/50 focus-visible:ring-gold-500/20"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
               <div className="flex gap-3 w-full md:w-auto">
-                {/* Mobile Filter Trigger */}
                 <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <SheetTrigger asChild>
                     <Button
                       variant="outline"
-                      className="lg:hidden w-full md:w-auto border-zinc-700 hover:bg-zinc-800 hover:text-white"
+                      className="lg:hidden w-full md:w-auto border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-white"
                     >
                       <Filter className="mr-2 h-4 w-4" /> Filters
                     </Button>
                   </SheetTrigger>
                   <SheetContent
                     side="left"
-                    className="bg-black border-r-zinc-800 p-6 overflow-y-auto"
+                    className="bg-white border-r-zinc-200 dark:bg-zinc-950 dark:border-r-zinc-800 p-6 overflow-y-auto"
                   >
                     <FilterSidebar
                       onClose={() => setIsFilterOpen(false)}
@@ -293,60 +306,45 @@ function CoursesPage() {
                   </SheetContent>
                 </Sheet>
 
-                {/* Sort Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full md:w-44 justify-between border-zinc-800 bg-zinc-900/50 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700"
+                      className="w-full md:w-48 justify-between border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-white"
                     >
-                      <span className="flex items-center gap-2">
-                        <ArrowUpDown className="h-4 w-4" />
+                      <span className="flex items-center gap-2 truncate">
+                        <ArrowUpDown className="h-4 w-4 shrink-0" />
                         {sortOrder}
                       </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
+                      <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
-                    className="w-44 bg-zinc-900 border-zinc-800 text-zinc-200"
+                    className="w-48 bg-white border-zinc-200 text-zinc-800 dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200"
                   >
-                    <DropdownMenuItem
-                      className="focus:bg-zinc-800 focus:text-white cursor-pointer"
-                      onClick={() => setSortOrder("Most Popular")}
-                    >
-                      Most Popular
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="focus:bg-zinc-800 focus:text-white cursor-pointer"
-                      onClick={() => setSortOrder("Newest")}
-                    >
-                      Newest
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="focus:bg-zinc-800 focus:text-white cursor-pointer"
-                      onClick={() => setSortOrder("Price: Low to High")}
-                    >
-                      Price: Low to High
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="focus:bg-zinc-800 focus:text-white cursor-pointer"
-                      onClick={() => setSortOrder("Price: High to Low")}
-                    >
-                      Price: High to Low
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="focus:bg-zinc-800 focus:text-white cursor-pointer"
-                      onClick={() => setSortOrder("Highest Rated")}
-                    >
-                      Highest Rated
-                    </DropdownMenuItem>
+                    {(
+                      [
+                        "Most Popular",
+                        "Newest",
+                        "Price: Low to High",
+                        "Price: High to Low",
+                        "Highest Rated",
+                      ] as const
+                    ).map((opt) => (
+                      <DropdownMenuItem
+                        key={opt}
+                        className="focus:bg-zinc-100 focus:text-zinc-900 dark:focus:bg-zinc-800 dark:focus:text-white cursor-pointer"
+                        onClick={() => setSortOrder(opt)}
+                      >
+                        {opt}
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
 
-            {/* Course Grid */}
             {sortedCourses.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {sortedCourses.map((course) => (
@@ -355,7 +353,7 @@ function CoursesPage() {
               </div>
             ) : (
               <div className="text-center py-20">
-                <h3 className="text-xl font-semibold text-zinc-300 mb-2">
+                <h3 className="text-xl font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
                   No courses found
                 </h3>
                 <p className="text-zinc-500">
@@ -364,12 +362,11 @@ function CoursesPage() {
               </div>
             )}
 
-            {/* Pagination (Visual only for now) */}
             {sortedCourses.length > 0 && (
               <div className="mt-12 flex justify-center">
                 <Button
                   variant="ghost"
-                  className="text-zinc-400 hover:text-white hover:bg-transparent"
+                  className="text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-transparent"
                 >
                   Load More Courses
                 </Button>
@@ -381,5 +378,3 @@ function CoursesPage() {
     </div>
   );
 }
-
-

@@ -60,7 +60,7 @@ function Schedule() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-5">
+      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none p-5">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-white mb-4">This week</h3>
         <ul className="divide-y divide-zinc-800/80">
           {events.map((e, i) => (
@@ -76,7 +76,7 @@ function Schedule() {
                 <span className="text-sm font-semibold text-amber-300">{e.date}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate group-hover:text-amber-300 transition-colors">{e.title}</p>
+                <p className="text-sm font-medium text-zinc-900 dark:text-white truncate group-hover:text-amber-300 transition-colors">{e.title}</p>
                 <p className="text-xs text-zinc-500 mt-0.5 inline-flex items-center gap-2">
                   <Clock className="h-3 w-3" /> {e.time} · {e.instructor}
                 </p>

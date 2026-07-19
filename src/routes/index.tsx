@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
 export const Route = createFileRoute("/")({ component: Home });
 
@@ -23,7 +24,6 @@ import {
   CheckCircle2,
   Timer,
 } from "lucide-react";
-import React from "react";
 import { CustomCursor } from "@/components/ui/custom-cursor";
 
 // --- DATA ---
@@ -42,6 +42,7 @@ const categories = [
 
 const courses = [
   {
+    id: "1",
     title: "The Completed Web Development Bootcamp 2026",
     instructor: "Dr. Angela Yu",
     rating: 4.8,
@@ -54,6 +55,7 @@ const courses = [
     category: "Development",
   },
   {
+    id: "2",
     title: "Master Digital Marketing: Strategy & Analytics",
     instructor: "Seth Godin",
     rating: 4.9,
@@ -66,6 +68,7 @@ const courses = [
     category: "Marketing",
   },
   {
+    id: "3",
     title: "UI/UX Design Masterclass: From Zero to Hero",
     instructor: "Gary Simon",
     rating: 4.7,
@@ -78,6 +81,7 @@ const courses = [
     category: "Design",
   },
   {
+    id: "4",
     title: "Machine Learning A-Z: Hands-On Python & R",
     instructor: "Kirill Eremenko",
     rating: 4.8,
@@ -92,8 +96,19 @@ const courses = [
 ];
 
 function Home() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+
+  const goSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    void navigate({
+      to: "/courses",
+      search: search.trim() ? { q: search.trim() } : {},
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-zinc-800 selection:text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-white selection:bg-zinc-200 dark:selection:bg-zinc-800 selection:text-zinc-900 dark:selection:text-white font-sans overflow-x-hidden">
       <CustomCursor />
       <Navbar />
 
@@ -139,20 +154,22 @@ function Home() {
               </p>
 
               {/* Search Bar - Udemy Style */}
-              <div className="relative max-w-md mb-8 group">
+              <form onSubmit={goSearch} className="relative max-w-md mb-8 group">
                 <div className="absolute inset-0 bg-linear-to-r from-gold-500 to-amber-600 rounded-full blur opacity-25 group-hover:opacity-40 transition duration-500"></div>
-                <div className="relative flex items-center bg-zinc-900 border border-zinc-800 rounded-full p-2 shadow-2xl">
+                <div className="relative flex items-center bg-white border border-zinc-200 dark:bg-zinc-900 dark:border-zinc-800 rounded-full p-2 shadow-2xl">
                   <Search className="ml-4 w-5 h-5 text-zinc-500" />
                   <Input
                     type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                     placeholder="What do you want to learn?"
-                    className="border-none bg-transparent focus-visible:ring-0 text-white placeholder:text-zinc-500 h-10 px-4"
+                    className="border-none bg-transparent focus-visible:ring-0 text-zinc-900 dark:text-white placeholder:text-zinc-500 h-10 px-4"
                   />
-                  <Button className="rounded-full bg-white text-black hover:bg-zinc-200 px-6 font-semibold">
+                  <Button type="submit" className="keep-contrast rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 px-6 font-semibold">
                     Search
                   </Button>
                 </div>
-              </div>
+              </form>
 
               <div className="flex items-center gap-4 text-sm text-zinc-500">
                 <div className="flex -space-x-3">
@@ -284,17 +301,26 @@ function Home() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.map((cat, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ scale: 1.05 }}
-                className="p-6 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-gold-500/50 hover:bg-zinc-800 transition-all cursor-pointer group"
+            {categories.map((cat) => (
+              <button
+                key={cat.label}
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/courses",
+                    search: { category: cat.label },
+                  })
+                }
+                className="text-left p-6 rounded-2xl bg-zinc-900/50 border border-white/5 hover:border-gold-500/50 hover:bg-zinc-800 transition-all cursor-pointer group h-full focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
               >
                 <cat.icon
                   className={`w-10 h-10 ${cat.color} mb-4 group-hover:text-white transition-colors`}
                 />
-                <h3 className="text-lg font-semibold">{cat.label}</h3>
-              </motion.div>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">{cat.label}</h3>
+                <p className="mt-2 text-xs text-zinc-500 group-hover:text-amber-400/80 transition-colors">
+                  Browse courses →
+                </p>
+              </button>
             ))}
           </div>
         </div>
@@ -312,94 +338,84 @@ function Home() {
                 Hand-picked by our editors for their quality.
               </p>
             </div>
-            <Button
-              variant="outline"
-              className="text-white border-white/20 hover:bg-white/10 hidden md:flex"
+            <Link
+              to="/courses"
+              className="hidden md:inline-flex items-center rounded-full border border-white/30 bg-transparent px-5 py-2 text-sm font-medium text-zinc-900 dark:text-white hover:bg-white hover:text-black transition-colors"
             >
               View All Courses
-            </Button>
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {courses.map((course, i) => (
-              <motion.div
-                key={i}
-                data-cursor="card"
-                whileHover={{ y: -10 }}
-                className="group relative bg-[#0F0F12] rounded-2xl overflow-hidden border border-white/10 hover:shadow-2xl hover:shadow-gold-900/10 transition-all duration-300"
+            {courses.map((course) => (
+              <button
+                key={course.id}
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/courses/$id",
+                    params: { id: course.id },
+                  })
+                }
+                className="group relative text-left bg-white dark:bg-[#0F0F12] rounded-2xl overflow-hidden border border-zinc-200 dark:border-white/10 hover:shadow-2xl hover:shadow-gold-900/10 hover:-translate-y-2 transition-all duration-300 h-full cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50"
               >
-                {/* Image */}
                 <div className="relative h-48 w-full overflow-hidden">
                   <img
                     src={course.image}
                     alt={course.title}
-                    
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110 w-full h-full"
                   />
                   {course.bestseller && (
-                    <div className="absolute top-3 left-3 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase">
+                    <div className="absolute top-3 left-3 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded shadow-lg uppercase z-10">
                       Bestseller
                     </div>
                   )}
-                  {/* Overlay on Hover */}
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <Button className="rounded-full bg-white text-black hover:bg-zinc-200">
+                  <div className="keep-contrast absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-[1]">
+                    <span className="rounded-full bg-white text-black px-4 py-2 text-sm font-medium">
                       Preview Course
-                    </Button>
+                    </span>
                   </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg leading-tight line-clamp-2 text-white group-hover:text-gold-400 transition-colors">
-                      {course.title}
-                    </h3>
-                  </div>
-                  <p className="text-xs text-zinc-400 mb-3">
-                    {course.instructor}
-                  </p>
+                  <h3 className="font-bold text-lg leading-tight line-clamp-2 text-zinc-900 dark:text-white group-hover:text-gold-400 transition-colors mb-2">
+                    {course.title}
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{course.instructor}</p>
 
                   <div className="flex items-center gap-1 mb-3">
-                    <span className="font-bold text-amber-500">
-                      {course.rating}
-                    </span>
+                    <span className="font-bold text-amber-500">{course.rating}</span>
                     <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className="w-3 h-3 text-amber-500 fill-amber-500"
-                        />
+                      {[...Array(5)].map((_, si) => (
+                        <Star key={si} className="w-3 h-3 text-amber-500 fill-amber-500" />
                       ))}
                     </div>
-                    <span className="text-xs text-zinc-500 ml-1">
-                      ({course.students})
-                    </span>
+                    <span className="text-xs text-zinc-500 ml-1">({course.students})</span>
                   </div>
 
                   <div className="flex items-center justify-between mt-4 font-semibold">
                     <div>
-                      <span className="text-lg text-white">{course.price}</span>
+                      <span className="text-lg text-zinc-900 dark:text-white">{course.price}</span>
                       <span className="ml-2 text-sm text-zinc-500 line-through decoration-zinc-600">
                         {course.oldPrice}
                       </span>
                     </div>
-                    <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gold-500 group-hover:text-black transition-colors">
+                    <span className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-gold-500 group-hover:text-black transition-colors">
                       <ArrowRight className="w-4 h-4" />
-                    </div>
+                    </span>
                   </div>
                 </div>
-              </motion.div>
+              </button>
             ))}
           </div>
 
           <div className="mt-12 w-full md:hidden">
-            <Button
-              variant="outline"
-              className="w-full text-white border-white/20 hover:bg-white/10"
+            <Link
+              to="/courses"
+              className="flex w-full items-center justify-center rounded-full border border-white/30 px-5 py-3 text-sm font-medium text-zinc-900 dark:text-white hover:bg-white hover:text-black transition-colors"
             >
               View All Courses
-            </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -418,7 +434,7 @@ function Home() {
                   
                   className="object-cover"
                 />
-                <div className="absolute bottom-6 left-6 right-6 bg-black/80 backdrop-blur-md p-6 rounded-xl border border-white/10">
+                <div className="keep-contrast absolute bottom-6 left-6 right-6 bg-black/80 backdrop-blur-md p-6 rounded-xl border border-white/10">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
                       <PlayCircle className="text-gold-500 w-6 h-6" />
@@ -493,8 +509,8 @@ function Home() {
                 </div>
               </div>
 
-              <Button className="mt-10 rounded-full h-12 px-8 bg-gold-500 text-black hover:bg-gold-600 font-bold">
-                Start Learning Today
+              <Button asChild className="mt-10 rounded-full h-12 px-8 bg-gold-500 text-black hover:bg-gold-600 font-bold">
+                <Link to="/signup">Start Learning Today</Link>
               </Button>
             </div>
           </div>
@@ -572,19 +588,22 @@ function Home() {
                 className="relative group"
               >
                 <div className="absolute -inset-1 bg-linear-to-r from-gold-400 to-amber-600 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-500"></div>
-                <Button className="relative h-16 px-12 rounded-full bg-zinc-900 border border-gold-500/50 text-white font-medium text-lg overflow-hidden group-hover:text-gold-400 transition-colors">
-                  <span className="relative z-10 flex items-center">
-                    Start Teaching
-                    <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </span>
+                <Button asChild className="relative h-16 px-12 rounded-full bg-zinc-900 border border-gold-500/50 text-white font-medium text-lg overflow-hidden group-hover:text-gold-400 transition-colors">
+                  <Link to="/signup">
+                    <span className="relative z-10 flex items-center">
+                      Start Teaching
+                      <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    </span>
+                  </Link>
                 </Button>
               </motion.div>
 
               <Button
                 variant="ghost"
-                className="h-16 px-10 rounded-full text-zinc-400 hover:text-white hover:bg-white/5 transition-all text-lg font-light tracking-wide"
+                asChild
+                className="h-16 px-10 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all text-lg font-light tracking-wide"
               >
-                Learn More
+                <Link to="/courses">Learn More</Link>
               </Button>
             </motion.div>
 
@@ -624,70 +643,79 @@ function Home() {
               <h4 className="font-bold text-white mb-4">SkillBridge</h4>
               <ul className="space-y-2 text-sm text-zinc-500">
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    About Us
-                  </a>
+                  <Link to="/courses" className="hover:text-gold-500">
+                    Courses
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Careers
-                  </a>
+                  <Link to="/signup" className="hover:text-gold-500">
+                    Get started
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Blog
-                  </a>
+                  <Link to="/login" className="hover:text-gold-500">
+                    Log in
+                  </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-white mb-4">Resources</h4>
+              <h4 className="font-bold text-white mb-4">Learn</h4>
               <ul className="space-y-2 text-sm text-zinc-500">
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Help Center
-                  </a>
+                  <Link to="/student/dashboard" className="hover:text-gold-500">
+                    Student dashboard
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Terms of Service
-                  </a>
+                  <Link to="/student/quizzes" className="hover:text-gold-500">
+                    Quizzes
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Privacy Policy
-                  </a>
+                  <Link to="/student/certificates" className="hover:text-gold-500">
+                    Certificates
+                  </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-white mb-4">Community</h4>
+              <h4 className="font-bold text-white mb-4">Teach</h4>
               <ul className="space-y-2 text-sm text-zinc-500">
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Learners
-                  </a>
+                  <Link to="/instructor/dashboard" className="hover:text-gold-500">
+                    Instructor studio
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Partners
-                  </a>
+                  <Link to="/instructor/courses" className="hover:text-gold-500">
+                    My courses
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-gold-500">
-                    Developers
-                  </a>
+                  <Link to="/signup" className="hover:text-gold-500">
+                    Become an instructor
+                  </Link>
                 </li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold text-white mb-4">Contact</h4>
-              <p className="text-sm text-zinc-500 mb-4">
-                New York, NY 10012, US
-              </p>
-              <div className="flex gap-4">
-                {/* Social Icons would go here */}
-              </div>
+              <h4 className="font-bold text-white mb-4">Platform</h4>
+              <ul className="space-y-2 text-sm text-zinc-500">
+                <li>
+                  <Link to="/admin" className="hover:text-gold-500">
+                    Admin
+                  </Link>
+                </li>
+                <li>
+                  <a href="mailto:support@skillbridge.io" className="hover:text-gold-500">
+                    support@skillbridge.io
+                  </a>
+                </li>
+                <li>
+                  <span className="text-zinc-600">New York, NY 10012, US</span>
+                </li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center text-zinc-600 text-sm">

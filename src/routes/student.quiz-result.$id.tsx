@@ -279,7 +279,7 @@ function QuizResultPage() {
                     {entry.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">{entry.name}</div>
+                    <div className="text-sm font-medium text-zinc-900 dark:text-white truncate">{entry.name}</div>
                     <div className="text-[10px] text-zinc-500">{entry.streak} day streak</div>
                   </div>
                   <div className="text-sm font-serif text-amber-200">{entry.score}/{RESULT.total}</div>
@@ -388,7 +388,7 @@ function QuizResultPage() {
                   <Target className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-white">{area.topic}</div>
+                  <div className="text-sm font-medium text-zinc-900 dark:text-white">{area.topic}</div>
                   <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <motion.div
                       initial={{ width: 0 }}

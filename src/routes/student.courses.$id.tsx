@@ -791,7 +791,7 @@ function ModuleRow({ module: m, index, open, onToggle }: { module: Module; index
     <div className="overflow-hidden rounded-xl">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-white/5"
+        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-zinc-100 dark:hover:bg-white/5"
       >
         <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/10 bg-gradient-to-br from-amber-300/15 to-rose-400/10 font-serif text-sm text-amber-200">
           {index.toString().padStart(2, "0")}
@@ -838,7 +838,7 @@ function LessonRow({ lesson: l }: { lesson: Lesson }) {
       className={cn(
         "group flex items-center gap-3 rounded-lg border border-transparent px-3 py-2 transition",
         l.active && "border-amber-300/30 bg-amber-300/10",
-        !l.active && !l.locked && "hover:bg-white/5",
+        !l.active && !l.locked && "hover:bg-zinc-100 dark:hover:bg-white/5",
         l.locked && "opacity-50",
       )}
     >

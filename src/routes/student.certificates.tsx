@@ -45,7 +45,7 @@ function Certificates() {
 
             <div className="relative mt-6">
               <p className="text-xs text-zinc-500">Awarded to</p>
-              <p className="text-lg font-semibold text-white font-serif">Alex Smith</p>
+              <p className="text-lg font-semibold text-zinc-900 dark:text-white font-serif">Alex Smith</p>
               <p className="text-xs text-zinc-500 mt-3">For successfully completing</p>
               <h3 className="text-xl text-amber-300 font-medium font-serif mt-1">{c.course}</h3>
               <p className="text-xs text-zinc-400 mt-2">Instructor: {c.instructor}</p>
@@ -57,13 +57,13 @@ function Certificates() {
                 <p className="font-mono mt-0.5">{c.credentialId}</p>
               </div>
               <div className="flex gap-1">
-                <button className="p-2 rounded-lg text-zinc-400 hover:bg-white/5 hover:text-amber-400" title="View">
+                <button className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-amber-400" title="View">
                   <ExternalLink className="h-4 w-4" />
                 </button>
-                <button className="p-2 rounded-lg text-zinc-400 hover:bg-white/5 hover:text-amber-400" title="Share">
+                <button className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-amber-400" title="Share">
                   <Share2 className="h-4 w-4" />
                 </button>
-                <button className="p-2 rounded-lg text-zinc-400 hover:bg-white/5 hover:text-amber-400" title="Download">
+                <button className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-amber-400" title="Download">
                   <Download className="h-4 w-4" />
                 </button>
               </div>

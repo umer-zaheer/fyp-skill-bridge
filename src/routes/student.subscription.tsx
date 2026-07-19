@@ -92,7 +92,7 @@ function Subscription() {
                 <Sparkles className="h-3 w-3" /> Current
               </span>
             )}
-            <h4 className="text-lg font-semibold text-white">{p.name}</h4>
+            <h4 className="text-lg font-semibold text-zinc-900 dark:text-white">{p.name}</h4>
             <p className="text-xs text-zinc-500 mt-1">{p.tagline}</p>
             <p className="mt-4">
               <span className="text-4xl font-light text-white">${p.price}</span>
@@ -110,7 +110,7 @@ function Subscription() {
               className={`mt-6 w-full py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 p.highlight
                   ? "bg-amber-500/10 text-amber-400 border border-amber-500/30 cursor-default"
-                  : "border border-zinc-700 text-zinc-200 hover:bg-white/5"
+                  : "border border-zinc-700 text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5"
               }`}
             >
               {p.cta}
@@ -121,21 +121,21 @@ function Subscription() {
 
       {/* Payment + invoices */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-5">
+        <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none p-5">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-white mb-4">Payment method</h3>
-          <div className="flex items-center gap-3 p-4 rounded-xl border border-zinc-800 bg-zinc-950/50">
+          <div className="flex items-center gap-3 p-4 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/50">
             <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <CreditCard className="h-5 w-5 text-amber-400" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-white">Visa •••• 4242</p>
+              <p className="text-sm font-medium text-zinc-900 dark:text-white">Visa •••• 4242</p>
               <p className="text-xs text-zinc-500">Expires 08 / 2028</p>
             </div>
           </div>
           <button className="mt-3 w-full py-2 text-xs text-amber-400 hover:text-amber-300">Update payment method</button>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-5 lg:col-span-2">
+        <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none p-5 lg:col-span-2">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-white mb-4">Billing history</h3>
           <div className="divide-y divide-zinc-800/80">
             {invoices.map((inv, i) => (
@@ -147,14 +147,14 @@ function Subscription() {
                 className="flex items-center gap-4 py-3"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white font-mono">{inv.id}</p>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white font-mono">{inv.id}</p>
                   <p className="text-xs text-zinc-500">{inv.date}</p>
                 </div>
                 <span className="text-sm text-zinc-300">${inv.amount}.00</span>
                 <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                   {inv.status}
                 </span>
-                <button className="p-2 rounded-lg text-zinc-400 hover:bg-white/5 hover:text-amber-400">
+                <button className="p-2 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-amber-400">
                   <Download className="h-4 w-4" />
                 </button>
               </motion.div>

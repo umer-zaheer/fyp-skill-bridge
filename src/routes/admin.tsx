@@ -14,7 +14,7 @@ import type { NavItem } from "@/components/dashboard/DashboardSidebar";
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
 const items: NavItem[] = [
-  { label: "Dashboard", to: "/admin", icon: LayoutDashboard },
+  { label: "Dashboard", to: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Users", to: "/admin/users", icon: Users },
   { label: "Courses", to: "/admin/courses", icon: BookOpen },
   { label: "Payments", to: "/admin/payments", icon: CreditCard },

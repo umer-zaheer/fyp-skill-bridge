@@ -23,11 +23,11 @@ export function InstructorSection({
 }: InstructorSectionProps) {
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-serif font-light text-white tracking-tight">
+      <h2 className="text-2xl font-serif font-light text-zinc-900 dark:text-white tracking-tight">
         Your Instructor
       </h2>
 
-      <div className="bg-[#0a0a0a] border border-white/5 p-6 md:p-8 rounded-xl shadow-[0_0_50px_-20px_rgba(0,0,0,0.5)]">
+      <div className="bg-white dark:bg-[#0a0a0a] border border-zinc-200 dark:border-white/5 p-6 md:p-8 rounded-xl shadow-[0_0_50px_-20px_rgba(0,0,0,0.5)]">
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 mb-8">
           {/* Avatar */}
           <div className="shrink-0 text-center md:text-left">
@@ -106,17 +106,18 @@ export function InstructorSection({
             <h4 className="font-serif font-medium text-white tracking-wide">
               More from {instructor.name}
             </h4>
-            <a
-              href="#"
+            <Link
+              to="/courses"
               className="text-xs text-luxury-gold hover:text-[#f3c848] transition-colors uppercase tracking-widest font-semibold"
             >
               View all courses
-            </a>
+            </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {featuredCourses.slice(0, 2).map((course) => (
               <Link
-                to={`/courses/${course.id}`}
+                to="/courses/$id"
+                params={{ id: course.id }}
                 key={course.id}
                 data-cursor="card"
                 className="group flex gap-3 p-3 rounded-lg bg-black/40 hover:bg-zinc-900 border border-white/5 hover:border-luxury-gold/30 transition-all duration-300"
