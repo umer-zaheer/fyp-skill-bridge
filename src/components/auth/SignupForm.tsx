@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +8,8 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { signupSchema } from "@/lib/schemas";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { ApiError } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +26,7 @@ export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [role, setRole] = useState<"student" | "instructor">("student");
   const navigate = useNavigate();
+  const { register, dashboardPath } = useAuth();
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -39,18 +40,26 @@ export default function SignupForm() {
 
   async function onSubmit(values: z.infer<typeof signupSchema>) {
     setIsLoading(true);
-    const finalData = { ...values, role };
-    await new Promise((r) => setTimeout(r, 800));
-    setIsLoading(false);
-    toast.success("Account created", {
-      description: `Welcome, ${finalData.fullName || "learner"}`,
-    });
-    void navigate({
-      to: role === "instructor" ? "/instructor/dashboard" : "/student/dashboard",
-    });
+    try {
+      const user = await register({
+        name: values.fullName,
+        email: values.email,
+        password: values.password,
+        role,
+      });
+      toast.success("Account created", {
+        description: `Welcome, ${user.name}`,
+      });
+      void navigate({ to: dashboardPath(user.role) });
+    } catch (error) {
+      const message =
+        error instanceof ApiError ? error.message : "Unable to create account";
+      toast.error("Signup failed", { description: message });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  // Animation variants for smooth tab switching
   const tabVariants = {
     hidden: { opacity: 0, x: 10 },
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
@@ -64,7 +73,7 @@ export default function SignupForm() {
         className="w-full"
         onValueChange={(val) => {
           setRole(val as "student" | "instructor");
-          form.setValue("role", val as "student" | "instructor"); // Update hidden form field if needed for validation
+          form.setValue("role", val as "student" | "instructor");
         }}
       >
         <TabsList className="grid w-full grid-cols-2 bg-zinc-900 border border-zinc-800 h-12 p-1 rounded-xl mb-6">
@@ -84,9 +93,8 @@ export default function SignupForm() {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {/* Common Fields, but wrapped in Motion to animate on Tab change if you wanted different fields */}
             <motion.div
-              key={role} // Re-renders animation when role changes
+              key={role}
               initial="hidden"
               animate="visible"
               exit="exit"
@@ -106,6 +114,7 @@ export default function SignupForm() {
                         placeholder={
                           role === "instructor" ? "Dr. John Doe" : "John Doe"
                         }
+                        autoComplete="name"
                         {...field}
                         className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />
@@ -126,6 +135,7 @@ export default function SignupForm() {
                     <FormControl>
                       <Input
                         placeholder="you@skillbridge.com"
+                        autoComplete="email"
                         {...field}
                         className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />
@@ -147,6 +157,7 @@ export default function SignupForm() {
                       <Input
                         type="password"
                         placeholder="••••••••"
+                        autoComplete="new-password"
                         {...field}
                         className="bg-white border-zinc-200 text-zinc-900 placeholder:text-zinc-400 dark:bg-zinc-900/50 dark:border-zinc-800 dark:text-white dark:placeholder:text-zinc-600 h-12 rounded-lg focus-visible:ring-amber-500/50 focus-visible:border-amber-500 transition-all duration-300"
                       />

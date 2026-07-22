@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import type { NavItem } from "@/components/dashboard/DashboardSidebar";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Route = createFileRoute("/student")({ component: StudentLayout });
 
@@ -26,6 +28,18 @@ const items: NavItem[] = [
 ];
 
 function StudentLayout() {
-  return <DashboardLayout items={items} user={{ name: "Alex Smith", role: "student" }} />;
-}
+  const { user } = useAuth();
 
+  return (
+    <RequireAuth roles={["student"]}>
+      <DashboardLayout
+        items={items}
+        user={{
+          name: user?.name || "Student",
+          role: user?.role || "student",
+          avatar: user?.avatar?.url,
+        }}
+      />
+    </RequireAuth>
+  );
+}

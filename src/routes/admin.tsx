@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import type { NavItem } from "@/components/dashboard/DashboardSidebar";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Route = createFileRoute("/admin")({ component: AdminLayout });
 
@@ -24,5 +26,18 @@ const items: NavItem[] = [
 ];
 
 function AdminLayout() {
-  return <DashboardLayout items={items} user={{ name: "Admin User", role: "admin" }} />;
+  const { user } = useAuth();
+
+  return (
+    <RequireAuth roles={["admin"]}>
+      <DashboardLayout
+        items={items}
+        user={{
+          name: user?.name || "Admin",
+          role: user?.role || "admin",
+          avatar: user?.avatar?.url,
+        }}
+      />
+    </RequireAuth>
+  );
 }

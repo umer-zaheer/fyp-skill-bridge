@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Tilt from "react-parallax-tilt";
 import {
@@ -17,9 +17,13 @@ import {
   Sparkles,
   Star,
   Users,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { courseImages } from "@/lib/defaultImages";
+import { myEnrollments, verifyCheckoutSession } from "@/lib/api/lms";
+import CourseChannel from "@/components/courses/CourseChannel";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/student/courses")({ component: MyCourses });
 
@@ -27,8 +31,8 @@ type Course = {
   id: string;
   title: string;
   instructor: string;
-  category: "Development" | "Design" | "Data" | "Marketing";
-  level: "Beginner" | "Intermediate" | "Advanced";
+  category: string;
+  level: string;
   status: "In Progress" | "Completed" | "Not Started";
   progress: number;
   lessons: number;
@@ -41,27 +45,95 @@ type Course = {
   image: string;
 };
 
-const allCourses: Course[] = [
-  { id: "c1", title: "Advanced TypeScript", instructor: "Sarah Lin", category: "Development", level: "Advanced", status: "In Progress", progress: 72, lessons: 32, completed: 23, rating: 4.9, students: 1284, hours: 18, color: "from-amber-500 via-orange-500 to-rose-500", icon: "TS", image: courseImages.typescript },
-  { id: "c2", title: "Design Systems with Figma", instructor: "Marco Reyes", category: "Design", level: "Intermediate", status: "In Progress", progress: 40, lessons: 28, completed: 11, rating: 4.8, students: 982, hours: 14, color: "from-fuchsia-500 via-purple-500 to-amber-500", icon: "DS", image: courseImages.figma },
-  { id: "c3", title: "Data Science 101", instructor: "Priya Nair", category: "Data", level: "Beginner", status: "Completed", progress: 100, lessons: 24, completed: 24, rating: 4.7, students: 874, hours: 12, color: "from-emerald-500 via-teal-500 to-amber-500", icon: "DS", image: courseImages.dataScience },
-  { id: "c4", title: "React Performance", instructor: "James Cole", category: "Development", level: "Advanced", status: "In Progress", progress: 18, lessons: 20, completed: 4, rating: 4.9, students: 712, hours: 9, color: "from-indigo-500 via-blue-500 to-amber-500", icon: "R", image: courseImages.react },
-  { id: "c5", title: "Product Marketing", instructor: "Hannah Ortiz", category: "Marketing", level: "Intermediate", status: "In Progress", progress: 60, lessons: 18, completed: 11, rating: 4.6, students: 654, hours: 10, color: "from-rose-500 via-pink-500 to-amber-500", icon: "PM", image: courseImages.product },
-  { id: "c6", title: "UX Research Sprint", instructor: "Sara Bennett", category: "Design", level: "Intermediate", status: "Completed", progress: 100, lessons: 14, completed: 14, rating: 4.8, students: 540, hours: 7, color: "from-sky-500 via-cyan-500 to-amber-500", icon: "UX", image: courseImages.ux },
-  { id: "c7", title: "Rust for Web Devs", instructor: "Liam Park", category: "Development", level: "Advanced", status: "Not Started", progress: 0, lessons: 22, completed: 0, rating: 4.9, students: 432, hours: 22, color: "from-orange-500 via-red-500 to-amber-500", icon: "Rs", image: courseImages.webDev },
-  { id: "c8", title: "Brand Identity Studio", instructor: "Hannah Ortiz", category: "Design", level: "Beginner", status: "Not Started", progress: 0, lessons: 16, completed: 0, rating: 4.7, students: 388, hours: 8, color: "from-violet-500 via-fuchsia-500 to-amber-500", icon: "BI", image: courseImages.design },
+const colors = [
+  "from-amber-500 via-orange-500 to-rose-500",
+  "from-fuchsia-500 via-purple-500 to-amber-500",
+  "from-emerald-500 via-teal-500 to-amber-500",
+  "from-indigo-500 via-blue-500 to-amber-500",
 ];
 
-const categories = ["All", "Development", "Design", "Data", "Marketing"] as const;
+const categories = ["All", "Development", "Design", "Data", "Marketing", "Business"] as const;
 const levels = ["All", "Beginner", "Intermediate", "Advanced"] as const;
 const statuses = ["All", "In Progress", "Completed", "Not Started"] as const;
 
+function mapEnrollment(e: any, i: number): Course {
+  const c = e.course || {};
+  const progress = e.progress ?? 0;
+  const lessons = (c.modules || []).reduce(
+    (n: number, m: any) => n + (m.lessons?.length || 0),
+    0,
+  );
+  const completed = Math.round((progress / 100) * lessons);
+  const status: Course["status"] =
+    progress >= 100 ? "Completed" : progress > 0 ? "In Progress" : "Not Started";
+  const levelRaw = c.level || "all";
+  const level =
+    levelRaw === "all"
+      ? "Beginner"
+      : levelRaw.charAt(0).toUpperCase() + levelRaw.slice(1);
+  return {
+    id: c._id,
+    title: c.title || "Course",
+    instructor: c.instructor?.name || "Instructor",
+    category: c.category?.name || "General",
+    level,
+    status,
+    progress,
+    lessons: lessons || 4,
+    completed,
+    rating: c.rating || 0,
+    students: c.studentsCount || 0,
+    hours: Math.max(1, Math.round(lessons * 0.5)),
+    color: colors[i % colors.length],
+    icon: (c.title || "C").slice(0, 2).toUpperCase(),
+    image: c.thumbnail?.url || courseImages.typescript,
+  };
+}
+
 function MyCourses() {
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [channelCourseId, setChannelCourseId] = useState<string | null>(null);
   const [category, setCategory] = useState<(typeof categories)[number]>("All");
   const [level, setLevel] = useState<(typeof levels)[number]>("All");
   const [status, setStatus] = useState<(typeof statuses)[number]>("All");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await myEnrollments();
+        setAllCourses((res.data || []).map(mapEnrollment));
+        if (res.data?.[0]?.course?._id) setChannelCourseId(res.data[0].course._id);
+      } catch {
+        setAllCourses([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Complete Stripe checkout on return (works even if webhook is delayed)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get("checkout");
+    const sessionId = params.get("session_id");
+    if (checkout !== "success" || !sessionId) return;
+
+    (async () => {
+      try {
+        await verifyCheckoutSession(sessionId);
+        toast.success("Payment successful — you're enrolled!");
+        const res = await myEnrollments();
+        setAllCourses((res.data || []).map(mapEnrollment));
+      } catch (e: any) {
+        toast.error(e?.message || "Could not confirm payment");
+      } finally {
+        window.history.replaceState({}, "", "/student/courses");
+      }
+    })();
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -80,6 +152,13 @@ function MyCourses() {
       className="relative space-y-6 text-zinc-200"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
+      {loading && (
+        <div className="flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        </div>
+      )}
+      {!loading && (
+      <>
       {/* Ambient bg */}
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-40 -right-32 h-96 w-96 bg-amber-500/10 rounded-full blur-[120px] animate-pulse" />
@@ -194,8 +273,35 @@ function MyCourses() {
         <div className="rounded-2xl border border-dashed border-zinc-800 bg-zinc-900/40 p-12 text-center">
           <BookOpen className="h-10 w-10 text-zinc-700 mx-auto" />
           <h3 className="mt-3 text-lg font-semibold text-zinc-900 dark:text-white">No courses found</h3>
-          <p className="text-sm text-zinc-500 mt-1">Try changing your filters or search query.</p>
+          <p className="text-sm text-zinc-500 mt-1">
+            Enroll from the catalog — try coupons TS20, DEV10, DESIGN25.
+          </p>
+          <Link to="/courses" className="inline-block mt-4 text-amber-400 text-sm underline">
+            Browse courses
+          </Link>
         </div>
+      )}
+
+      {channelCourseId && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-serif text-white">Class channel</h3>
+            <select
+              value={channelCourseId}
+              onChange={(e) => setChannelCourseId(e.target.value)}
+              className="rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-xs text-white"
+            >
+              {allCourses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <CourseChannel courseId={channelCourseId} />
+        </div>
+      )}
+      </>
       )}
     </div>
   );

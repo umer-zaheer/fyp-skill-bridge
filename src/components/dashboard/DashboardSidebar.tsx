@@ -1,7 +1,9 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronLeft, GraduationCap, LogOut, type LucideIcon } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { FileRouteTypes } from "@/routeTree.gen";
+import { useAuth } from "@/components/auth/AuthProvider";
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +29,13 @@ type Props = {
 export default function DashboardSidebar({ items, user, collapsed = false, onToggle }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Logged out");
+    void navigate({ to: "/login" });
+  };
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -136,7 +145,7 @@ export default function DashboardSidebar({ items, user, collapsed = false, onTog
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => void navigate({ to: "/login" })}
+                  onClick={() => void handleLogout()}
                   className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-sm font-semibold text-zinc-900"
                   title="Logout"
                 >
@@ -163,7 +172,7 @@ export default function DashboardSidebar({ items, user, collapsed = false, onTog
                 type="button"
                 className="text-zinc-400 hover:text-amber-600 dark:text-zinc-500 dark:hover:text-amber-400 transition-colors"
                 title="Logout"
-                onClick={() => void navigate({ to: "/login" })}
+                onClick={() => void handleLogout()}
               >
                 <LogOut className="h-4 w-4" />
               </button>

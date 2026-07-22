@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Area,
@@ -24,30 +25,19 @@ import {
   TrendingUp,
   Trophy,
   Video,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { getChartTheme } from "@/lib/themeStyles";
 import { courseImages } from "@/lib/defaultImages";
+import { myCertificates, myEnrollments, searchCourses } from "@/lib/api/lms";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Route = createFileRoute("/student/dashboard")({
   component: StudentDashboard,
 });
-
-// ---------- Mock data ----------
-const widgets: Array<{
-  label: string;
-  value: string;
-  trend: string;
-  icon: LucideIcon;
-  hint: string;
-}> = [
-  { label: "Courses Enrolled", value: "12", trend: "+2 this month", icon: BookOpen, hint: "active" },
-  { label: "Hours Learned", value: "148", trend: "+12.4 this week", icon: Clock, hint: "h" },
-  { label: "Certificates", value: "6", trend: "+1 awarded", icon: Award, hint: "earned" },
-  { label: "Quiz Average", value: "92%", trend: "+4.2% vs last", icon: Trophy, hint: "score" },
-];
 
 const weeklyProgress = [
   { day: "Mon", minutes: 45 },
@@ -66,24 +56,6 @@ const activity = [
   { week: "W4", lessons: 14, quizzes: 4 },
   { week: "W5", lessons: 10, quizzes: 3 },
   { week: "W6", lessons: 16, quizzes: 5 },
-];
-
-const upcomingClasses = [
-  { title: "Advanced TypeScript: Generics Deep Dive", instructor: "Sarah Lin", time: "Today · 4:00 PM", duration: "60 min" },
-  { title: "Design Systems Workshop", instructor: "Marco Reyes", time: "Tomorrow · 11:00 AM", duration: "90 min" },
-  { title: "Data Science: Regression Live Q&A", instructor: "Priya Nair", time: "Thu · 6:30 PM", duration: "45 min" },
-];
-
-const announcements = [
-  { title: "New course: React Server Components", body: "Just launched — explore the future of React rendering.", time: "2h ago" },
-  { title: "Maintenance window Sunday", body: "Platform updates Sun 2–3 AM UTC. Brief downtime expected.", time: "1d ago" },
-  { title: "Q3 Live Mentor Hours", body: "Book 1:1 sessions with top instructors. Limited slots.", time: "3d ago" },
-];
-
-const recommended = [
-  { title: "Modern System Design", instructor: "James Cole", rating: 4.9, hours: 18, tag: "Trending", image: courseImages.systemDesign },
-  { title: "Product Marketing Mastery", instructor: "Hannah Ortiz", rating: 4.8, hours: 12, tag: "New", image: courseImages.product },
-  { title: "UX Research Sprint", instructor: "Sara Bennett", rating: 4.7, hours: 9, tag: "For you", image: courseImages.ux },
 ];
 
 // ---------- Helpers ----------
@@ -138,6 +110,85 @@ function SectionTitle({ icon: Icon, title, action }: { icon: LucideIcon; title: 
 function StudentDashboard() {
   const { isDark } = useTheme();
   const chart = getChartTheme(isDark);
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [enrollments, setEnrollments] = useState<any[]>([]);
+  const [certs, setCerts] = useState<any[]>([]);
+  const [recommended, setRecommended] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [e, c, rec] = await Promise.all([
+          myEnrollments(),
+          myCertificates(),
+          searchCourses("development design data"),
+        ]);
+        setEnrollments(e.data || []);
+        setCerts(c.data || []);
+        setRecommended((rec.data || []).slice(0, 3));
+      } catch {
+        /* */
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const avgProgress =
+    enrollments.length > 0
+      ? Math.round(
+          enrollments.reduce((s, x) => s + (x.progress || 0), 0) / enrollments.length,
+        )
+      : 0;
+
+  const widgets: Array<{
+    label: string;
+    value: string;
+    trend: string;
+    icon: LucideIcon;
+    hint: string;
+  }> = [
+    {
+      label: "Courses Enrolled",
+      value: String(enrollments.length),
+      trend: "from API",
+      icon: BookOpen,
+      hint: "active",
+    },
+    {
+      label: "Avg Progress",
+      value: `${avgProgress}%`,
+      trend: "across courses",
+      icon: Clock,
+      hint: "%",
+    },
+    {
+      label: "Certificates",
+      value: String(certs.length),
+      trend: "earned",
+      icon: Award,
+      hint: "earned",
+    },
+    {
+      label: "In Progress",
+      value: String(enrollments.filter((e) => (e.progress || 0) < 100).length),
+      trend: "active learning",
+      icon: Trophy,
+      hint: "courses",
+    },
+  ];
+
+  const continueCourse = enrollments.find((e) => (e.progress || 0) < 100)?.course;
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
   return (
     <div
       className="space-y-6 text-zinc-700 dark:text-zinc-200"
@@ -158,21 +209,24 @@ function StudentDashboard() {
               Welcome back
             </p>
             <h2 className="text-3xl md:text-4xl font-light tracking-tight text-zinc-900 dark:text-white font-serif">
-              Good evening,{" "}
+              Hello,{" "}
               <span className="bg-gradient-to-r from-amber-600 to-amber-500 dark:from-amber-200 dark:to-amber-500 bg-clip-text text-transparent font-semibold">
-                Alex
+                {user?.name?.split(" ")[0] || "Learner"}
               </span>
             </h2>
             <p className="mt-2 text-sm text-zinc-400 max-w-lg">
-              You're on a 7-day streak. Pick up where you left off in <span className="text-amber-400">Advanced TypeScript</span>.
+              {continueCourse
+                ? `Continue ${continueCourse.title} · ${enrollments.find((e) => e.course?._id === continueCourse._id)?.progress || 0}% done`
+                : "Browse the catalog to enroll in your next course."}
             </p>
           </div>
           <Link
-            to="/student/learn"
+            to={continueCourse ? "/student/courses/$id" : "/courses"}
+            params={continueCourse ? { id: continueCourse._id } : undefined}
             className="group inline-flex items-center gap-2 self-start md:self-auto rounded-lg bg-amber-500 hover:bg-amber-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition-colors shadow-lg shadow-amber-500/20"
           >
             <PlayCircle className="h-4 w-4" />
-            Continue learning
+            {continueCourse ? "Continue learning" : "Browse courses"}
           </Link>
         </div>
       </motion.div>
@@ -242,22 +296,22 @@ function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Upcoming + Announcements */}
+      {/* Enrolled courses + certs */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card delay={7} className="lg:col-span-2">
           <SectionTitle
             icon={Calendar}
-            title="Upcoming Classes"
+            title="Your courses"
             action={
-              <Link to="/student/schedule" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
-                View schedule →
+              <Link to="/student/courses" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+                View all →
               </Link>
             }
           />
           <ul className="divide-y divide-zinc-800/80">
-            {upcomingClasses.map((c, i) => (
+            {enrollments.slice(0, 5).map((e, i) => (
               <motion.li
-                key={c.title}
+                key={e._id}
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.07 }}
@@ -268,42 +322,45 @@ function StudentDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-zinc-900 dark:text-white truncate group-hover:text-amber-300 transition-colors">
-                    {c.title}
+                    {e.course?.title}
                   </p>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    {c.instructor} · {c.duration}
+                    {e.course?.instructor?.name} · {e.progress || 0}%
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium text-amber-400">{c.time}</p>
-                  <Link
-                    to="/student/schedule"
-                    className="mt-1 inline-block text-[11px] text-zinc-400 hover:text-white transition-colors"
-                  >
-                    Join →
-                  </Link>
-                </div>
+                <Link
+                  to="/student/courses/$id"
+                  params={{ id: e.course?._id }}
+                  className="text-xs text-amber-400"
+                >
+                  Open →
+                </Link>
               </motion.li>
             ))}
+            {enrollments.length === 0 && (
+              <li className="py-4 text-sm text-zinc-500">No enrollments yet.</li>
+            )}
           </ul>
         </Card>
 
         <Card delay={8}>
-          <SectionTitle icon={Megaphone} title="Announcements" />
+          <SectionTitle icon={Megaphone} title="Certificates" />
           <ul className="space-y-4">
-            {announcements.map((a, i) => (
+            {certs.slice(0, 4).map((a, i) => (
               <motion.li
-                key={a.title}
+                key={a._id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 + i * 0.08 }}
                 className="relative pl-4 border-l border-amber-500/30"
               >
-                <p className="text-sm font-medium text-zinc-900 dark:text-white">{a.title}</p>
-                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{a.body}</p>
-                <p className="text-[11px] text-zinc-600 mt-1.5">{a.time}</p>
+                <p className="text-sm font-medium text-zinc-900 dark:text-white">{a.course?.title}</p>
+                <p className="text-xs text-zinc-400 mt-1 font-mono">{a.code}</p>
               </motion.li>
             ))}
+            {certs.length === 0 && (
+              <li className="text-xs text-zinc-500">Complete a course at 100% to earn one.</li>
+            )}
           </ul>
         </Card>
       </div>
@@ -323,7 +380,7 @@ function StudentDashboard() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {recommended.map((r, i) => (
-            <Link key={r.title} to="/courses/$id" params={{ id: String(i + 1) }}>
+            <Link key={r._id} to="/courses/$id" params={{ id: r._id }}>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -333,26 +390,26 @@ function StudentDashboard() {
               >
               <div className="relative h-32 overflow-hidden bg-zinc-900">
                 <img
-                  src={r.image}
+                  src={r.thumbnail?.url || courseImages.typescript}
                   alt={r.title}
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/70 via-transparent to-transparent" />
                 <span className="absolute top-3 left-3 text-[10px] uppercase tracking-widest font-medium px-2 py-1 rounded-full bg-zinc-950/70 text-amber-300 border border-amber-500/30">
-                  {r.tag}
+                  {r.category?.name || "Course"}
                 </span>
               </div>
               <div className="p-4">
                 <h4 className="text-base font-semibold text-zinc-900 dark:text-white group-hover:text-amber-300 transition-colors leading-snug">
                   {r.title}
                 </h4>
-                <p className="text-xs text-zinc-500 mt-1">{r.instructor}</p>
+                <p className="text-xs text-zinc-500 mt-1">{r.instructor?.name}</p>
                 <div className="mt-3 flex items-center justify-between text-xs">
                   <span className="inline-flex items-center gap-1 text-amber-400">
                     <Star className="h-3.5 w-3.5 fill-amber-400" />
-                    {r.rating}
+                    {r.rating?.toFixed?.(1) || "—"}
                   </span>
-                  <span className="text-zinc-500">{r.hours}h</span>
+                  <span className="text-zinc-500">${r.price}</span>
                 </div>
               </div>
             </motion.div>

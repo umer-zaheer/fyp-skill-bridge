@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Wallet, Download, DollarSign, Clock, CheckCircle2, Filter } from "lucide-react";
+import { Wallet, Download, DollarSign, Clock, CheckCircle2, Filter, Link2 } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -15,6 +15,12 @@ import { instructorEarningsTrend, instructorPayouts, instructorSales } from "@/l
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { getChartTheme } from "@/lib/themeStyles";
+import {
+  instructorEarnings,
+  instructorStripeOnboard,
+  instructorStripeStatus,
+} from "@/lib/api/lms";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/instructor/earnings")({
   component: InstructorEarningsPage,
@@ -32,6 +38,61 @@ function InstructorEarningsPage() {
   const { isDark } = useTheme();
   const chart = getChartTheme(isDark);
   const [payoutFilter, setPayoutFilter] = useState<PayoutFilter>("All");
+  const [liveTotal, setLiveTotal] = useState<number | null>(null);
+  const [stripeReady, setStripeReady] = useState(false);
+  const [connectEnabled, setConnectEnabled] = useState<boolean | null>(null);
+  const [connecting, setConnecting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [earn, st] = await Promise.all([
+          instructorEarnings(),
+          instructorStripeStatus(),
+        ]);
+        setLiveTotal(earn.data?.total ?? 0);
+        setStripeReady(Boolean(st.data?.stripeOnboardingComplete));
+      } catch {
+        /* keep mock */
+      }
+    })();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("stripe") === "return" || params.get("stripe") === "refresh") {
+      (async () => {
+        try {
+          const st = await instructorStripeStatus();
+          setStripeReady(Boolean(st.data?.stripeOnboardingComplete));
+          if (st.data?.stripeOnboardingComplete) {
+            toast.success("Stripe Connect ready — you can receive 80% payouts");
+          } else if (params.get("stripe") === "return") {
+            toast.message("Finish Stripe onboarding to enable destination payouts");
+          }
+        } catch {
+          /* */
+        } finally {
+          window.history.replaceState({}, "", "/instructor/earnings");
+        }
+      })();
+    }
+  }, []);
+
+  const connectStripe = async () => {
+    setConnecting(true);
+    try {
+      const res = await instructorStripeOnboard();
+      if (res.url) window.location.href = res.url;
+      else toast.error("No Stripe onboarding URL returned");
+    } catch (e: any) {
+      const msg = e?.message || "Stripe Connect failed";
+      toast.error(msg, { duration: 8000 });
+      if (/Enable Stripe Connect/i.test(msg)) {
+        setConnectEnabled(false);
+      }
+    } finally {
+      setConnecting(false);
+    }
+  };
 
   const usd = (n: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -42,7 +103,7 @@ function InstructorEarningsPage() {
   );
 
   const available = instructorPayouts.filter((p) => p.status === "Pending").reduce((s, p) => s + p.amount, 0);
-  const paidYtd = instructorPayouts.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const paidYtd = liveTotal ?? instructorPayouts.filter((p) => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
   const monthSales = instructorSales.filter((s) => s.status === "Paid").reduce((s, p) => s + p.amount, 0);
 
   return (
@@ -62,12 +123,48 @@ function InstructorEarningsPage() {
                 earnings
               </span>
             </h2>
-            <p className="mt-2 text-sm text-zinc-400">Track sales, pending payouts, and transfer history.</p>
+            <p className="mt-2 text-sm text-zinc-400">
+              You receive 80% of each sale · platform keeps 20%. Stripe:{" "}
+              <span className={stripeReady ? "text-emerald-400" : "text-amber-400"}>
+                {stripeReady
+                  ? "connected — destination payouts on"
+                  : "not connected — sales go to platform until you connect"}
+              </span>
+            </p>
+            <p className="mt-2 text-xs text-zinc-500 max-w-xl">
+              First-time setup: enable Connect at{" "}
+              <a
+                href="https://dashboard.stripe.com/test/connect"
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-amber-300/90 hover:text-amber-200"
+              >
+                dashboard.stripe.com/test/connect
+              </a>{" "}
+              (Get started), then click Connect Stripe here.
+            </p>
+            {connectEnabled === false && (
+              <p className="mt-2 text-xs text-amber-300/90 max-w-xl">
+                Connect is still disabled on the platform Stripe account. Finish Get started in the
+                dashboard, then try again.
+              </p>
+            )}
           </div>
-          <button className="inline-flex items-center gap-2 self-start rounded-lg border border-zinc-700 hover:border-amber-500/40 bg-zinc-900/80 px-5 py-3 text-sm font-medium text-zinc-900 dark:text-white transition-colors">
-            <Download className="h-4 w-4 text-amber-500" />
-            Export statement
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={connecting}
+              onClick={() => void connectStripe()}
+              className="inline-flex items-center gap-2 self-start rounded-lg border border-amber-500/40 bg-amber-500/10 px-5 py-3 text-sm font-medium text-amber-200 transition-colors disabled:opacity-60"
+            >
+              <Link2 className="h-4 w-4" />
+              {connecting ? "Opening…" : stripeReady ? "Stripe dashboard" : "Connect Stripe"}
+            </button>
+            <button className="inline-flex items-center gap-2 self-start rounded-lg border border-zinc-700 hover:border-amber-500/40 bg-zinc-900/80 px-5 py-3 text-sm font-medium text-zinc-900 dark:text-white transition-colors">
+              <Download className="h-4 w-4 text-amber-500" />
+              Export statement
+            </button>
+          </div>
         </div>
       </motion.div>
 

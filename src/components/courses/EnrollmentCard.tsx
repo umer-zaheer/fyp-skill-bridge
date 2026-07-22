@@ -1,46 +1,64 @@
 import { defaultCoursePreview } from "@/lib/defaultImages";
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Zap, Tag, Check, X, MonitorPlay } from "lucide-react";
+import { PlayCircle, Zap, Tag, Check, X, MonitorPlay, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/components/auth/AuthProvider";
+import {
+  addWishlist,
+  checkoutCourse,
+  validateCoupon,
+} from "@/lib/api/lms";
+import { ApiError } from "@/lib/api/client";
 
 interface EnrollmentCardProps {
+  courseId: string;
   price: number;
-  originalPrice: number;
-  discount: number;
+  originalPrice?: number;
+  discount?: number;
   features: string[];
   thumbnail?: string;
+  enrolled?: boolean;
 }
 
 export function EnrollmentCard({
+  courseId,
   price,
   originalPrice,
-  discount,
+  discount = 0,
   features,
   thumbnail,
+  enrolled = false,
 }: EnrollmentCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+  const [appliedCode, setAppliedCode] = useState("");
   const [discountApplied, setDiscountApplied] = useState(false);
   const [couponError, setCouponError] = useState("");
   const [currentPrice, setCurrentPrice] = useState(price);
+  const [loading, setLoading] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
-  const handleApplyCoupon = () => {
-    if (couponCode.trim().toUpperCase() === "ROYAL50") {
-      const newPrice = Number((price * 0.5).toFixed(2));
-      setCurrentPrice(newPrice);
+  const displayOriginal = originalPrice ?? price;
+
+  const handleApplyCoupon = async () => {
+    try {
+      const res = await validateCoupon(couponCode, courseId);
+      setCurrentPrice(res.data.finalPrice);
+      setAppliedCode(res.data.code);
       setDiscountApplied(true);
       setCouponError("");
-    } else {
-      setCouponError("Invalid coupon code");
+      toast.success(`${res.data.percentOff}% off applied`);
+    } catch (e) {
+      setCouponError(e instanceof ApiError ? e.message : "Invalid coupon");
       setDiscountApplied(false);
-      setTimeout(() => setCouponError(""), 3000);
     }
   };
 
@@ -48,6 +66,52 @@ export function EnrollmentCard({
     setCurrentPrice(price);
     setDiscountApplied(false);
     setCouponCode("");
+    setAppliedCode("");
+  };
+
+  const handleBuy = async () => {
+    if (!isAuthenticated) {
+      void navigate({ to: "/login" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await checkoutCourse(courseId, appliedCode || undefined);
+      if (res.free) {
+        toast.success("Enrolled successfully");
+        void navigate({ to: "/student/courses" });
+        return;
+      }
+      if (res.url) {
+        window.location.href = res.url;
+        return;
+      }
+      toast.error("Checkout unavailable");
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Checkout failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWishlist = async () => {
+    if (!isAuthenticated) {
+      void navigate({ to: "/login" });
+      return;
+    }
+    try {
+      await addWishlist(courseId);
+      toast.success("Saved to wishlist", {
+        action: {
+          label: "Open",
+          onClick: () => {
+            window.location.href = "/student/wishlist";
+          },
+        },
+      });
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : "Could not save");
+    }
   };
 
   return (
@@ -72,10 +136,7 @@ export function EnrollmentCard({
               className="absolute inset-0"
             ></iframe>
           ) : (
-            <div
-              onClick={() => setIsPlaying(true)}
-              className="relative w-full h-full"
-            >
+            <div onClick={() => setIsPlaying(true)} className="relative w-full h-full">
               <div
                 className="absolute inset-0 bg-cover bg-center opacity-80 group-hover:scale-105 transition-transform duration-700"
                 style={{
@@ -83,18 +144,15 @@ export function EnrollmentCard({
                 }}
               />
               <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-transparent to-transparent opacity-80" />
-
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 rounded-full keep-contrast bg-black/40 backdrop-blur-sm border border-luxury-gold/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-luxury-gold group-hover:border-luxury-gold transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] shadow-[0_0_30px_rgba(212,175,55,0.2)] z-20">
+                <div className="w-16 h-16 rounded-full keep-contrast bg-black/40 backdrop-blur-sm border border-luxury-gold/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-luxury-gold group-hover:border-luxury-gold transition-all duration-700 z-20">
                   <PlayCircle className="w-6 h-6 text-white ml-0.5 fill-white/10 group-hover:text-black group-hover:fill-black/20 transition-colors duration-500" />
                 </div>
-                {/* Ripple Effect */}
-                <span className="absolute inline-flex h-full w-full rounded-full bg-luxury-gold opacity-0 group-hover:animate-ping duration-1000 scale-50" />
               </div>
               <div className="absolute bottom-4 left-0 right-0 text-center z-10 w-full flex justify-center">
                 <Badge
                   variant="outline"
-                  className="bg-black/60 border-luxury-gold/40 backdrop-blur-md text-luxury-gold tracking-[0.2em] text-[10px] font-medium px-4 py-1 hover:bg-luxury-gold hover:text-black transition-all duration-500"
+                  className="bg-black/60 border-luxury-gold/40 backdrop-blur-md text-luxury-gold tracking-[0.2em] text-[10px] font-medium px-4 py-1"
                 >
                   PREVIEW
                 </Badge>
@@ -111,30 +169,29 @@ export function EnrollmentCard({
                 className="bg-emerald-400/10 text-emerald-400 border-emerald-400/20"
               >
                 <Zap size={14} className="fill-current mr-1" />
-                Limited Offer
+                SkillBridge
               </Badge>
-              <span className="text-xs font-mono text-zinc-500">
-                EXPIRES IN 2 DAYS
-              </span>
             </div>
             <div className="flex items-baseline gap-3">
               <span className="text-4xl font-serif text-zinc-900 dark:text-white tracking-tight">
-                ${currentPrice}
+                ${currentPrice.toFixed(2)}
               </span>
-              <span className="text-lg text-zinc-600 line-through decoration-zinc-700 decoration-1">
-                ${originalPrice}
-              </span>
-              <Badge
-                variant="outline"
-                className="bg-luxury-gold/5 text-luxury-gold border-luxury-gold/30 text-[10px] tracking-wider font-normal px-2"
-              >
-                {discountApplied
-                  ? Math.round(
-                      ((originalPrice - currentPrice) / originalPrice) * 100,
-                    )
-                  : discount}
-                % OFF
-              </Badge>
+              {displayOriginal > currentPrice && (
+                <span className="text-lg text-zinc-600 line-through decoration-zinc-700 decoration-1">
+                  ${displayOriginal.toFixed(2)}
+                </span>
+              )}
+              {(discountApplied || discount > 0) && (
+                <Badge
+                  variant="outline"
+                  className="bg-luxury-gold/5 text-luxury-gold border-luxury-gold/30 text-[10px] tracking-wider font-normal px-2"
+                >
+                  {discountApplied
+                    ? Math.round(((displayOriginal - currentPrice) / displayOriginal) * 100)
+                    : discount}
+                  % OFF
+                </Badge>
+              )}
             </div>
             {discountApplied && (
               <motion.div
@@ -142,44 +199,43 @@ export function EnrollmentCard({
                 animate={{ opacity: 1, height: "auto" }}
                 className="text-emerald-400 text-xs mt-2 flex items-center gap-1"
               >
-                <Check className="w-3 h-3" /> Coupon ROYAL50 applied!
+                <Check className="w-3 h-3" /> Coupon {appliedCode} applied!
               </motion.div>
             )}
           </div>
 
           <div className="space-y-3 mt-6">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            {enrolled ? (
               <Button
                 asChild
-                className="relative w-full text-sm tracking-widest font-semibold uppercase bg-luxury-gold hover:bg-[#c5a028] text-black shadow-[0_0_20px_-5px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_-5px_rgba(212,175,55,0.6)] transition-all duration-300 overflow-hidden group/btn"
+                className="w-full text-sm tracking-widest font-semibold uppercase bg-luxury-gold text-black"
                 size="lg"
               >
-                <Link to="/signup">
-                  <span className="relative z-10">Buy Now</span>
+                <Link to="/student/courses/$id" params={{ id: courseId }}>
+                  Go to course
                 </Link>
               </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            ) : (
               <Button
                 type="button"
-                variant="outline"
-                onClick={() =>
-                  toast.success("Saved to wishlist", {
-                    description: "View it anytime from your student dashboard.",
-                    action: {
-                      label: "Open",
-                      onClick: () => {
-                        window.location.href = "/student/wishlist";
-                      },
-                    },
-                  })
-                }
-                className="w-full text-sm tracking-widest font-semibold uppercase border-white/10 bg-transparent text-zinc-400 hover:text-white hover:bg-white/5 hover:border-white/20 transition-colors"
+                disabled={loading}
+                onClick={() => void handleBuy()}
+                className="relative w-full text-sm tracking-widest font-semibold uppercase bg-luxury-gold hover:bg-[#c5a028] text-black"
                 size="lg"
               >
-                Add to Wishlist
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {currentPrice === 0 ? "Enroll free" : "Buy Now"}
               </Button>
-            </motion.div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleWishlist()}
+              className="w-full text-sm tracking-widest font-semibold uppercase border-white/10 bg-transparent text-zinc-400 hover:text-white hover:bg-white/5"
+              size="lg"
+            >
+              Add to Wishlist
+            </Button>
           </div>
 
           <div className="pt-2">
@@ -200,7 +256,7 @@ export function EnrollmentCard({
                 </div>
                 <Button
                   className="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700"
-                  onClick={handleApplyCoupon}
+                  onClick={() => void handleApplyCoupon()}
                 >
                   Apply
                 </Button>
@@ -210,7 +266,7 @@ export function EnrollmentCard({
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-emerald-500" />
                   <span className="text-sm font-medium text-emerald-400">
-                    Code: <span className="font-bold">ROYAL50</span>
+                    Code: <span className="font-bold">{appliedCode}</span>
                   </span>
                 </div>
                 <Button
@@ -223,43 +279,17 @@ export function EnrollmentCard({
                 </Button>
               </div>
             )}
-            {couponError && (
-              <p className="text-red-500 text-xs mt-1 absolute">
-                {couponError}
-              </p>
-            )}
-          </div>
-
-          <div className="text-center mt-6">
-            <div className="text-[10px] uppercase tracking-widest text-zinc-500 mb-2 font-semibold">
-              Guaranteed Safe Checkout
-            </div>
-            <div className="flex justify-center gap-3 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-              <div className="h-6 w-10 bg-white rounded flex items-center justify-center text-[8px] text-black font-bold">
-                VISA
-              </div>
-              <div className="h-6 w-10 bg-white rounded flex items-center justify-center text-[8px] text-black font-bold">
-                MC
-              </div>
-              <div className="h-6 w-10 bg-white rounded flex items-center justify-center text-[8px] text-black font-bold">
-                PP
-              </div>
-            </div>
+            {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
           </div>
 
           <div className="space-y-6 pt-2">
             <Separator className="bg-zinc-800" />
-            <h4 className="font-bold text-white text-sm uppercase tracking-wider">
-              Key Features
-            </h4>
+            <h4 className="font-bold text-white text-sm uppercase tracking-wider">Key Features</h4>
             <ul className="space-y-4">
               {features.map((feature, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 text-sm text-zinc-400 group"
-                >
-                  <div className="mt-0.5 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0 group-hover:border-luxury-gold group-hover:bg-luxury-gold/10 transition-colors">
-                    <MonitorPlay className="w-3 h-3 text-zinc-500 group-hover:text-luxury-gold transition-colors" />
+                <li key={i} className="flex items-start gap-3 text-sm text-zinc-400 group">
+                  <div className="mt-0.5 w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
+                    <MonitorPlay className="w-3 h-3 text-zinc-500" />
                   </div>
                   <span>{feature}</span>
                 </li>

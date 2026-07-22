@@ -16,6 +16,7 @@ import { Search, Filter, ArrowUpDown, ChevronDown } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { SparklesCore } from "@/components/ui/sparkles";
 import { Typewriter } from "@/components/ui/typewriter";
+import { getCourses, searchCourses } from "@/lib/api/lms";
 
 const coursesSearchSchema = z.object({
   category: z.string().optional(),
@@ -151,7 +152,7 @@ function mapHomeCategory(label: string): string {
 
 function CoursesPage() {
   const search = Route.useSearch();
-  const [courses] = useState<Course[]>(MOCK_COURSES);
+  const [courses, setCourses] = useState<Course[]>(MOCK_COURSES);
   const [sortOrder, setSortOrder] = useState("Most Popular");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(search.q ?? "");
@@ -171,6 +172,48 @@ function CoursesPage() {
     }
     if (search.q) setSearchQuery(search.q);
   }, [search.category, search.q]);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = searchQuery.trim()
+          ? await searchCourses(searchQuery.trim())
+          : await getCourses({ limit: 50 });
+        if (!mounted || !res.data?.length) return;
+        const mapped: Course[] = res.data.map((c: any) => ({
+          id: c._id,
+          title: c.title,
+          instructor: c.instructor?.name || "Instructor",
+          thumbnail:
+            c.thumbnail?.url ||
+            "https://images.unsplash.com/photo-1516116216624-53e697fedbea?q=80&w=800&auto=format&fit=crop",
+          price: c.price,
+          originalPrice: c.price,
+          rating: c.rating || 0,
+          reviews: c.ratingCount || c.studentsCount || 0,
+          level:
+            c.level === "all"
+              ? "All Levels"
+              : c.level
+                ? c.level.charAt(0).toUpperCase() + c.level.slice(1)
+                : "All Levels",
+          duration: `${(c.modules || []).reduce(
+            (n: number, m: any) => n + (m.lessons?.length || 0),
+            0,
+          )} lessons`,
+          category: c.category?.name || "General",
+        }));
+        setCourses(mapped);
+      } catch {
+        /* keep mock fallback */
+      }
+    };
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, [searchQuery]);
 
   const filteredCourses = courses.filter((course) => {
     if (

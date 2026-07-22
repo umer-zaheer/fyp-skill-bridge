@@ -1,342 +1,178 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import {
-  Search,
-  Plus,
-  Star,
-  BookOpen,
-  Eye,
-  Archive,
-  Pencil,
-  X,
-  LayoutGrid,
-  List,
-  Users,
-} from "lucide-react";
-import { adminCourses } from "@/lib/mockData";
-import { cn } from "@/lib/utils";
+  createCoupon,
+  getCategories,
+  getCourses,
+  listCoupons,
+  updateCourse,
+} from "@/lib/api/lms";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/courses")({ component: AdminCoursesPage });
 
-type StatusFilter = "All" | "Published" | "Draft" | "Review" | "Archived";
-type ViewMode = "table" | "grid";
-
-const statusStyles: Record<string, string> = {
-  Published: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  Draft: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
-  Review: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-  Archived: "bg-red-500/10 text-red-400 border-red-500/20",
-};
-
 function AdminCoursesPage() {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<StatusFilter>("All");
-  const [category, setCategory] = useState("All");
-  const [view, setView] = useState<ViewMode>("table");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    percentOff: "10",
+    categoryId: "",
+  });
 
-  const categories = ["All", ...Array.from(new Set(adminCourses.map((c) => c.category)))];
-
-  const filtered = useMemo(() => {
-    return adminCourses.filter((c) => {
-      const q = query.toLowerCase();
-      const matchesQuery =
-        !q ||
-        c.title.toLowerCase().includes(q) ||
-        c.instructor.toLowerCase().includes(q);
-      const matchesStatus = status === "All" || c.status === status;
-      const matchesCategory = category === "All" || c.category === category;
-      return matchesQuery && matchesStatus && matchesCategory;
-    });
-  }, [query, status, category]);
-
-  const usd = (n: number) =>
-    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
-
-  const counts = {
-    published: adminCourses.filter((c) => c.status === "Published").length,
-    draft: adminCourses.filter((c) => c.status === "Draft").length,
-    review: adminCourses.filter((c) => c.status === "Review").length,
-    students: adminCourses.reduce((s, c) => s + c.students, 0),
+  const load = async () => {
+    try {
+      const [c, cat, coup] = await Promise.all([
+        getCourses({ limit: 100 }),
+        getCategories(),
+        listCoupons(),
+      ]);
+      setCourses(c.data || []);
+      setCategories(cat.data || []);
+      setCoupons((coup.data || []).filter((x: any) => x.type === "category"));
+    } catch {
+      /* */
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const setStatus = async (id: string, status: string) => {
+    try {
+      await updateCourse(id, { status });
+      toast.success(`Marked ${status}`);
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed");
+    }
+  };
+
+  const addCategoryCoupon = async () => {
+    try {
+      await createCoupon({
+        code: couponForm.code,
+        type: "category",
+        percentOff: Number(couponForm.percentOff),
+        categoryId: couponForm.categoryId,
+      });
+      toast.success("Category discount created");
+      setCouponForm({ code: "", percentOff: "10", categoryId: "" });
+      await load();
+    } catch (e: any) {
+      toast.error(e?.message || "Failed");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-zinc-200">
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-gradient-to-br from-zinc-900 via-zinc-900 to-zinc-950 p-6 md:p-8"
-      >
-        <div className="absolute -bottom-24 -right-10 h-64 w-64 bg-amber-500/10 rounded-full blur-[100px]" />
-        <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-amber-500/80 mb-2">Catalog</p>
-            <h2 className="text-3xl font-light tracking-tight text-white font-serif">
-              Course{" "}
-              <span className="bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent font-semibold">
-                library
-              </span>
-            </h2>
-            <p className="mt-2 text-sm text-zinc-400">
-              Publish, review, and archive learning content across categories.
-            </p>
-          </div>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-2 self-start rounded-lg bg-amber-500 hover:bg-amber-400 px-5 py-3 text-sm font-semibold text-zinc-950 transition-colors shadow-lg shadow-amber-500/20"
+      <div>
+        <h2 className="text-3xl font-serif text-white">Courses</h2>
+        <p className="text-sm text-zinc-400 mt-1">Moderate catalog · category % discounts</p>
+      </div>
+
+      <div className="rounded-2xl border border-amber-500/20 bg-zinc-900/50 p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-white">
+          Admin category coupons (all courses in category)
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input
+            placeholder="CODE"
+            value={couponForm.code}
+            onChange={(e) =>
+              setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })
+            }
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+          />
+          <input
+            type="number"
+            value={couponForm.percentOff}
+            onChange={(e) => setCouponForm({ ...couponForm, percentOff: e.target.value })}
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+          />
+          <select
+            value={couponForm.categoryId}
+            onChange={(e) => setCouponForm({ ...couponForm, categoryId: e.target.value })}
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
           >
-            <Plus className="h-4 w-4" />
-            New course
+            <option value="">Category…</option>
+            {categories.map((c) => (
+              <option key={c._id} value={c._id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => void addCategoryCoupon()}
+            className="rounded-lg bg-amber-500 text-zinc-950 text-sm font-semibold"
+          >
+            Create
           </button>
         </div>
-      </motion.div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: "Published", value: counts.published, icon: Eye },
-          { label: "In review", value: counts.review, icon: BookOpen },
-          { label: "Drafts", value: counts.draft, icon: Pencil },
-          { label: "Total learners", value: counts.students.toLocaleString(), icon: Users },
-        ].map((s, i) => (
-          <motion.div
-            key={s.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 * i }}
-            className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none p-4"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-xs uppercase tracking-wider text-zinc-500">{s.label}</p>
-              <s.icon className="h-4 w-4 text-amber-500" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-zinc-900 dark:text-white">{s.value}</p>
-          </motion.div>
-        ))}
+        <ul className="text-xs text-zinc-400 space-y-1">
+          {coupons.map((c) => (
+            <li key={c._id}>
+              <span className="text-amber-400 font-mono">{c.code}</span> · {c.percentOff}% off{" "}
+              {c.category?.name}
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800/80 dark:bg-zinc-900/60 dark:shadow-none overflow-hidden">
-        <div className="p-4 md:p-5 border-b border-zinc-800/80 flex flex-col xl:flex-row gap-3 xl:items-center xl:justify-between">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search courses or instructors…"
-              className="w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/60 pl-10 pr-3 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/40"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {(["All", "Published", "Draft", "Review", "Archived"] as StatusFilter[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatus(s)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md border transition-colors",
-                  status === s
-                    ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
-                    : "text-zinc-500 border-zinc-800 hover:text-white",
-                )}
-              >
-                {s}
-              </button>
-            ))}
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="rounded-md border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950/60 px-3 py-1.5 text-xs text-zinc-300 focus:outline-none"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c === "All" ? "All categories" : c}
-                </option>
-              ))}
-            </select>
-            <div className="flex rounded-md border border-zinc-800 p-0.5">
-              <button
-                onClick={() => setView("table")}
-                className={cn("p-1.5 rounded", view === "table" ? "bg-amber-500/15 text-amber-400" : "text-zinc-500")}
-              >
-                <List className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setView("grid")}
-                className={cn("p-1.5 rounded", view === "grid" ? "bg-amber-500/15 text-amber-400" : "text-zinc-500")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {view === "table" ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-zinc-500">
-                <tr className="border-b border-zinc-800/80">
-                  <th className="text-left font-medium px-5 py-3">Course</th>
-                  <th className="text-left font-medium px-5 py-3">Category</th>
-                  <th className="text-left font-medium px-5 py-3">Students</th>
-                  <th className="text-left font-medium px-5 py-3">Price</th>
-                  <th className="text-left font-medium px-5 py-3">Rating</th>
-                  <th className="text-left font-medium px-5 py-3">Status</th>
-                  <th className="text-right font-medium px-5 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60">
-                {filtered.map((c, i) => (
-                  <motion.tr
-                    key={c.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="hover:bg-white/[0.02]"
+      <div className="rounded-2xl border border-zinc-800 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-900 text-zinc-400 text-left">
+            <tr>
+              <th className="px-4 py-3">Title</th>
+              <th className="px-4 py-3">Instructor</th>
+              <th className="px-4 py-3">Category</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((c) => (
+              <tr key={c._id} className="border-t border-zinc-800">
+                <td className="px-4 py-3 text-white">{c.title}</td>
+                <td className="px-4 py-3">{c.instructor?.name}</td>
+                <td className="px-4 py-3">{c.category?.name}</td>
+                <td className="px-4 py-3 capitalize text-amber-400">{c.status}</td>
+                <td className="px-4 py-3 space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => void setStatus(c._id, "published")}
+                    className="text-xs text-emerald-400"
                   >
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <img src={c.thumb} alt="" className="h-12 w-16 rounded-md object-cover border border-zinc-800" />
-                        <div>
-                          <p className="font-medium text-white">{c.title}</p>
-                          <p className="text-xs text-zinc-500">{c.instructor} · {c.lessons} lessons</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-zinc-400">{c.category}</td>
-                    <td className="px-5 py-3 text-zinc-400">{c.students.toLocaleString()}</td>
-                    <td className="px-5 py-3 text-white font-medium">{usd(c.price)}</td>
-                    <td className="px-5 py-3">
-                      {c.rating > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-amber-400">
-                          <Star className="h-3.5 w-3.5 fill-amber-400" />
-                          {c.rating}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-600">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span className={cn("inline-flex text-xs font-medium px-2 py-1 rounded-full border", statusStyles[c.status])}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="inline-flex gap-1">
-                        <button className="p-1.5 rounded-md text-zinc-500 hover:text-amber-400 hover:bg-zinc-100 dark:hover:bg-white/5">
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button className="p-1.5 rounded-md text-zinc-500 hover:text-red-400 hover:bg-zinc-100 dark:hover:bg-white/5">
-                          <Archive className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filtered.map((c, i) => (
-              <motion.div
-                key={c.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                whileHover={{ y: -3 }}
-                className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 overflow-hidden hover:border-amber-500/30 transition-colors group"
-              >
-                <div className="relative h-36">
-                  <img src={c.thumb} alt="" className="h-full w-full object-cover" />
-                  <span className={cn("absolute top-3 left-3 text-[10px] uppercase tracking-widest font-medium px-2 py-1 rounded-full border backdrop-blur-sm", statusStyles[c.status])}>
-                    {c.status}
-                  </span>
-                </div>
-                <div className="p-4">
-                  <p className="text-xs text-zinc-500">{c.category}</p>
-                  <h4 className="mt-1 font-semibold text-zinc-900 dark:text-white group-hover:text-amber-300 transition-colors">{c.title}</h4>
-                  <p className="text-xs text-zinc-500 mt-1">{c.instructor}</p>
-                  <div className="mt-3 flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">{c.students.toLocaleString()} students</span>
-                    <span className="font-semibold text-amber-400">{usd(c.price)}</span>
-                  </div>
-                </div>
-              </motion.div>
+                    Publish
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void setStatus(c._id, "archived")}
+                    className="text-xs text-red-400"
+                  >
+                    Archive
+                  </button>
+                </td>
+              </tr>
             ))}
-          </div>
-        )}
-
-        {filtered.length === 0 && (
-          <p className="px-5 py-12 text-center text-zinc-500">No courses match your filters.</p>
-        )}
+          </tbody>
+        </table>
       </div>
-
-      <AnimatePresence>
-        {createOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setCreateOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white font-serif">Create course</h3>
-                <button onClick={() => setCreateOpen(false)} className="text-zinc-500 hover:text-white">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-zinc-500">Title</label>
-                  <input
-                    placeholder="Course title"
-                    className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-zinc-500">Category</label>
-                    <select className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none">
-                      <option>Development</option>
-                      <option>Design</option>
-                      <option>Data</option>
-                      <option>Business</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-zinc-500">Price (USD)</label>
-                    <input
-                      type="number"
-                      placeholder="49"
-                      className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-zinc-500">Instructor</label>
-                  <input
-                    placeholder="Instructor name"
-                    className="mt-1.5 w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40"
-                  />
-                </div>
-                <button
-                  onClick={() => setCreateOpen(false)}
-                  className="w-full rounded-lg bg-amber-500 hover:bg-amber-400 py-2.5 text-sm font-semibold text-zinc-950 transition-colors"
-                >
-                  Save as draft
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

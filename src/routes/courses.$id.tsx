@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/courses/$id")({ component: CoursePage });
 
@@ -7,9 +8,10 @@ import { CourseCurriculum } from "@/components/courses/CourseCurriculum";
 import { InstructorSection } from "@/components/courses/InstructorSection";
 import { ReviewsSection } from "@/components/courses/ReviewsSection";
 import { EnrollmentCard } from "@/components/courses/EnrollmentCard";
-import { Check } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { CustomCursor } from "@/components/ui/custom-cursor";
+import { getCourse } from "@/lib/api/lms";
 
 // Mock Data
 const COURSE_DATA = {
@@ -213,6 +215,98 @@ const MORE_COURSES = [
 
 function CoursePage() {
   const { id } = Route.useParams();
+  const [live, setLive] = useState<any | null>(null);
+  const [enrolled, setEnrolled] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [myReview, setMyReview] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadCourse = async () => {
+    const res = await getCourse(id);
+    setLive(res.data);
+    setEnrolled(Boolean(res.enrolled));
+    setReviews(res.reviews || []);
+    setMyReview(res.myReview || null);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        await loadCourse();
+      } catch {
+        if (mounted) setLive(null);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  const data = live
+    ? {
+        id: live._id,
+        title: live.title,
+        subtitle: live.shortDescription || live.description?.slice(0, 160) || "",
+        rating: live.rating || 0,
+        reviewsCount: live.ratingCount || reviews.length || 0,
+        studentsCount: live.studentsCount || 0,
+        updatedAt: live.updatedAt
+          ? `Updated ${new Date(live.updatedAt).toLocaleDateString()}`
+          : "",
+        language: "English",
+        image: live.thumbnail?.url || COURSE_DATA.image,
+        price: live.price,
+        originalPrice: live.price,
+        discount: 0,
+        description: `<p>${live.description || ""}</p>`,
+        learningPoints: live.tags?.length
+          ? live.tags
+          : COURSE_DATA.learningPoints,
+        requirements: COURSE_DATA.requirements,
+        features: [
+          `${(live.modules || []).reduce((n: number, m: any) => n + (m.lessons?.length || 0), 0)} lessons`,
+          "Full lifetime access",
+          "Certificate of completion",
+          "Course channel for enrolled students",
+        ],
+        instructor: {
+          name: live.instructor?.name || "Instructor",
+          role: "Instructor",
+          image:
+            live.instructor?.avatar?.url ||
+            COURSE_DATA.instructor.image,
+          bio: COURSE_DATA.instructor.bio,
+          rating: 4.8,
+          reviews: live.ratingCount || 0,
+          students: live.studentsCount || 0,
+          courses: 1,
+        },
+        curriculum: (live.modules || []).map((m: any, mi: number) => ({
+          id: m._id || `m${mi}`,
+          title: m.title,
+          duration: "",
+          lessons: (m.lessons || []).map((l: any, li: number) => ({
+            id: l._id || `l${li}`,
+            title: l.title,
+            duration: l.durationMinutes ? `${l.durationMinutes}m` : "",
+            isFree: Boolean(l.isPreview),
+            type: "video" as const,
+          })),
+        })),
+      }
+    : { ...COURSE_DATA, id };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-luxury-black text-zinc-100 font-sans pb-20 selection:bg-luxury-gold/30 selection:text-luxury-gold relative overflow-hidden">
       <CustomCursor />
@@ -263,14 +357,14 @@ function CoursePage() {
       {/* Hero Section */}
       <div className="relative z-10 w-full max-w-350 mx-auto bg-black/20 backdrop-blur-xl border-x border-white/5 shadow-[0_0_150px_-50px_rgba(234,179,8,0.1)] min-h-screen">
         <CourseHero
-          title={COURSE_DATA.title}
-          subtitle={COURSE_DATA.subtitle}
-          rating={COURSE_DATA.rating}
-          reviewsCount={COURSE_DATA.reviewsCount}
-          studentsCount={COURSE_DATA.studentsCount}
-          updatedAt={COURSE_DATA.updatedAt}
-          language={COURSE_DATA.language}
-          instructor={COURSE_DATA.instructor}
+          title={data.title}
+          subtitle={data.subtitle}
+          rating={data.rating}
+          reviewsCount={data.reviewsCount}
+          studentsCount={data.studentsCount}
+          updatedAt={data.updatedAt}
+          language={data.language}
+          instructor={data.instructor}
         />
       </div>
 
@@ -287,7 +381,7 @@ function CoursePage() {
                 What you&apos;ll learn
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {COURSE_DATA.learningPoints.map((point, i) => (
+                {data.learningPoints.map((point: string, i: number) => (
                   <div key={i} className="flex items-start gap-3 group">
                     <Check className="w-5 h-5 text-luxury-gold shrink-0 mt-0.5" />
                     <span className="text-sm text-zinc-400 group-hover:text-zinc-200 transition-colors duration-300 leading-relaxed font-light">
@@ -299,7 +393,7 @@ function CoursePage() {
             </div>
 
             {/* Course Content / Curriculum */}
-            <CourseCurriculum modules={COURSE_DATA.curriculum} />
+            <CourseCurriculum modules={data.curriculum} />
 
             {/* Requirements */}
             <div className="space-y-6">
@@ -307,7 +401,7 @@ function CoursePage() {
                 Requirements
               </h2>
               <ul className="list-disc pl-5 space-y-3 text-zinc-400 font-light">
-                {COURSE_DATA.requirements.map((req, i) => (
+                {data.requirements.map((req: string, i: number) => (
                   <li key={i} className="pl-2 marker:text-luxury-gold">
                     {req}
                   </li>
@@ -322,32 +416,38 @@ function CoursePage() {
               </h2>
               <div
                 className="prose prose-invert prose-lg max-w-none prose-headings:font-serif prose-headings:text-[#d4af37] prose-p:text-zinc-400 prose-p:font-light prose-strong:text-white prose-ul:text-zinc-400 prose-li:marker:text-[#d4af37]"
-                dangerouslySetInnerHTML={{ __html: COURSE_DATA.description }}
+                dangerouslySetInnerHTML={{ __html: data.description }}
               />
             </div>
 
             {/* Instructor */}
             <InstructorSection
-              instructor={COURSE_DATA.instructor}
+              instructor={data.instructor}
               featuredCourses={MORE_COURSES}
             />
 
             {/* Reviews */}
             <ReviewsSection
-              rating={COURSE_DATA.rating}
-              totalReviews={COURSE_DATA.reviewsCount}
-              reviews={COURSE_DATA.reviews}
+              courseId={String(data.id)}
+              rating={data.rating}
+              totalReviews={data.reviewsCount}
+              reviews={live ? reviews : []}
+              enrolled={enrolled}
+              myReview={myReview}
+              onChanged={() => void loadCourse()}
             />
           </div>
 
           {/* Sidebar Column (Right - 1/3) */}
           <div className="lg:col-span-1 relative">
             <EnrollmentCard
-              price={COURSE_DATA.price}
-              originalPrice={COURSE_DATA.originalPrice}
-              discount={COURSE_DATA.discount}
-              features={COURSE_DATA.features}
-              thumbnail={COURSE_DATA.image}
+              courseId={String(data.id)}
+              price={data.price}
+              originalPrice={data.originalPrice}
+              discount={data.discount}
+              features={data.features}
+              thumbnail={data.image}
+              enrolled={enrolled}
             />
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { Bell, Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Props = {
   onMenuClick: () => void;
@@ -22,6 +24,7 @@ type Props = {
 export default function DashboardTopbar({ onMenuClick, onToggleDesktop, desktopHidden, pageTitle, user }: Props) {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { logout } = useAuth();
   const fallbackTitle =
     pageTitle ??
     pathname
@@ -45,6 +48,12 @@ export default function DashboardTopbar({ onMenuClick, onToggleDesktop, desktopH
       : user.role === "instructor"
         ? ("/instructor/dashboard" as const)
         : ("/student/dashboard" as const);
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success("Logged out");
+    void navigate({ to: "/login" });
+  };
 
   return (
     <header
@@ -119,7 +128,7 @@ export default function DashboardTopbar({ onMenuClick, onToggleDesktop, desktopH
             <DropdownMenuSeparator className="bg-zinc-200 dark:bg-zinc-800" />
             <DropdownMenuItem
               className="text-red-500 focus:bg-red-500/10 focus:text-red-600 dark:text-red-400 dark:focus:text-red-300 cursor-pointer"
-              onClick={() => void navigate({ to: "/login" })}
+              onClick={() => void handleLogout()}
             >
               Logout
             </DropdownMenuItem>

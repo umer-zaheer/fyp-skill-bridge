@@ -12,11 +12,12 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import type { NavItem } from "@/components/dashboard/DashboardSidebar";
+import RequireAuth from "@/components/auth/RequireAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Route = createFileRoute("/instructor")({
   component: InstructorLayout,
   beforeLoad: ({ location }) => {
-    // Exact layout URL has no page — send users to the dashboard
     if (location.pathname === "/instructor" || location.pathname === "/instructor/") {
       throw redirect({ to: "/instructor/dashboard" });
     }
@@ -36,7 +37,18 @@ const items: NavItem[] = [
 ];
 
 function InstructorLayout() {
+  const { user } = useAuth();
+
   return (
-    <DashboardLayout items={items} user={{ name: "Sarah Lin", role: "instructor" }} />
+    <RequireAuth roles={["instructor"]}>
+      <DashboardLayout
+        items={items}
+        user={{
+          name: user?.name || "Instructor",
+          role: user?.role || "instructor",
+          avatar: user?.avatar?.url,
+        }}
+      />
+    </RequireAuth>
   );
 }

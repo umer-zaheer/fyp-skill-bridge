@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Settings,
@@ -13,9 +13,16 @@ import {
   Lock,
   Moon,
   Sun,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/components/theme/ThemeProvider";
+import {
+  platformStripeConnect,
+  platformStripeDisconnect,
+  platformStripeStatus,
+} from "@/lib/api/lms";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/settings")({ component: AdminSettingsPage });
 
@@ -54,6 +61,101 @@ function Toggle({
         )}
       />
     </button>
+  );
+}
+
+function StripePlatformPanel() {
+  const [status, setStatus] = useState<{
+    stripeConnected?: boolean;
+    stripeConfigured?: boolean;
+    platformFeePercent?: number;
+  } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refresh = async () => {
+    try {
+      const res = await platformStripeStatus();
+      setStatus(res.data);
+    } catch {
+      setStatus(null);
+    }
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const connect = async () => {
+    setBusy(true);
+    try {
+      await platformStripeConnect(20);
+      toast.success("Platform Stripe connected (80/20 marketplace enabled)");
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Connect failed — add STRIPE_SECRET_KEY to backend .env");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const disconnect = async () => {
+    setBusy(true);
+    try {
+      await platformStripeDisconnect();
+      toast.success("Platform Stripe disconnected — checkout paused");
+      await refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "Disconnect failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Field
+      label="Stripe marketplace"
+      hint="Connect to enable course checkout. Instructors still onboard their own Connect accounts to receive 80%."
+    >
+      <div className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm text-zinc-900 dark:text-white">
+              Status:{" "}
+              <span
+                className={
+                  status?.stripeConnected ? "text-emerald-500" : "text-amber-500"
+                }
+              >
+                {status?.stripeConnected ? "Connected" : "Disconnected"}
+              </span>
+            </p>
+            <p className="text-xs text-zinc-500 mt-1">
+              Keys configured: {status?.stripeConfigured ? "yes" : "no"} · Fee:{" "}
+              {status?.platformFeePercent ?? 20}% platform /{" "}
+              {100 - (status?.platformFeePercent ?? 20)}% instructor
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={busy || status?.stripeConnected}
+              onClick={() => void connect()}
+              className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-semibold text-zinc-950 disabled:opacity-40"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Connect"}
+            </button>
+            <button
+              type="button"
+              disabled={busy || !status?.stripeConnected}
+              onClick={() => void disconnect()}
+              className="rounded-lg border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-300 disabled:opacity-40"
+            >
+              Disconnect
+            </button>
+          </div>
+        </div>
+      </div>
+    </Field>
   );
 }
 
@@ -97,7 +199,6 @@ function AdminSettingsPage() {
 
   const [currency, setCurrency] = useState("USD");
   const [taxRate, setTaxRate] = useState("0");
-  const [stripeKey, setStripeKey] = useState("pk_live_••••••••••••");
 
   const [accent, setAccent] = useState("amber");
   const [compactNav, setCompactNav] = useState(false);
@@ -279,7 +380,10 @@ function AdminSettingsPage() {
           {tab === "billing" && (
             <div>
               <h3 className="text-sm font-semibold tracking-wide text-zinc-900 uppercase dark:text-white mb-1">Billing</h3>
-              <p className="text-xs text-zinc-500 mb-2">Payment provider and tax defaults.</p>
+              <p className="text-xs text-zinc-500 mb-2">
+                Platform Stripe marketplace — 20% admin / 80% instructor per course sale.
+              </p>
+              <StripePlatformPanel />
               <Field label="Currency">
                 <select
                   value={currency}
@@ -298,13 +402,6 @@ function AdminSettingsPage() {
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
                   className="w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500/40"
-                />
-              </Field>
-              <Field label="Stripe publishable key" hint="Used for checkout on the student portal.">
-                <input
-                  value={stripeKey}
-                  onChange={(e) => setStripeKey(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 px-3 py-2.5 text-sm text-white font-mono focus:outline-none focus:border-amber-500/40"
                 />
               </Field>
             </div>

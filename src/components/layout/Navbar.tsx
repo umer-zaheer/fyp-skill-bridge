@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const navLinks = [
   { label: "Courses", to: "/courses" as const },
@@ -13,6 +14,7 @@ const navLinks = [
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const { user, isAuthenticated, dashboardPath } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -51,18 +53,29 @@ export default function Navbar() {
             ))}
             <div className="h-4 w-px bg-zinc-200 dark:bg-white/10" />
             <ThemeToggle size="sm" />
-            <Link
-              to="/login"
-              className="text-sm font-medium text-zinc-900 hover:text-luxury-gold dark:text-white transition-colors"
-            >
-              Log In
-            </Link>
-            <Link
-              to="/signup"
-              className="keep-contrast bg-zinc-900 text-white dark:bg-white dark:text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
-            >
-              Start Legacy
-            </Link>
+            {isAuthenticated && user ? (
+              <Link
+                to={dashboardPath(user.role)}
+                className="keep-contrast bg-zinc-900 text-white dark:bg-white dark:text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-sm font-medium text-zinc-900 hover:text-luxury-gold dark:text-white transition-colors"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="keep-contrast bg-zinc-900 text-white dark:bg-white dark:text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors"
+                >
+                  Start Legacy
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="flex md:hidden items-center gap-2">
@@ -93,16 +106,24 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <Link to="/login" onClick={() => setIsOpen(false)}>
-                Log In
-              </Link>
-              <Link
-                to="/signup"
-                className="text-luxury-gold"
-                onClick={() => setIsOpen(false)}
-              >
-                Sign Up
-              </Link>
+              {isAuthenticated && user ? (
+                <Link to={dashboardPath(user.role)} onClick={() => setIsOpen(false)}>
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setIsOpen(false)}>
+                    Log In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="text-luxury-gold"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Sign Up
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}
